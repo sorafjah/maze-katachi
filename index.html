@@ -139,24 +139,29 @@
     .btn.main { grid-column: 1 / -1; }
   }
 
-  .print-header { display: none; }
+  .print-header, .print-title { display: none; }
   @media print {
     @page { size: A4 portrait; margin: 5mm 5mm 5mm 15mm; }
     html, body { height: auto; overflow: visible; background: #fff; }
     .app { display: block; padding: 0; }
     .panel, .toast { display: none !important; }
     .stage { display: block; padding: 0; }
-    .paper { box-shadow: none; padding: 0; border-radius: 0; }
+    /* 用紙いっぱい（高さ287mm）を使い、迷路は残りの場所のまん中に置く */
+    .paper { box-shadow: none; padding: 0; border-radius: 0; width: 190mm; height: 285mm; display: flex; flex-direction: column; }
     .print-header {
       display: flex; align-items: baseline; gap: 4mm; width: 190mm; margin-bottom: 4mm;
       font-size: 12pt; color: #000;
     }
     .print-header .name-line { flex: 1; border-bottom: 1.5px solid #000; min-height: 1.3em; }
     .print-header .maze-id { font-weight: 700; border-bottom: 1.5px solid #000; padding: 0 1mm; white-space: nowrap; }
+    .print-title {
+      display: block; text-align: center; font-size: 24pt; font-weight: 700; letter-spacing: 0.12em;
+      color: #000; margin: 2mm 0 0;
+    }
+    .maze-wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 4mm 0 2mm; }
     .print-header .answer-mark { display: none; font-weight: 700; border: 1.5px solid #000; padding: 0 3mm; }
     body.show-answer .print-header .answer-mark { display: inline-block; }
-    #mazeCanvas { width: 190mm !important; height: auto !important; margin: 0 auto; }
-    #mazeCanvas.tall { width: auto !important; height: 265mm !important; }
+    #mazeCanvas { width: auto !important; height: auto !important; max-width: 190mm; max-height: 240mm; flex: none; }
   }
 </style>
 </head>
@@ -199,7 +204,8 @@
         <span class="maze-id" id="mazeId"></span>
         <span class="answer-mark">こたえ</span>
       </div>
-      <canvas id="mazeCanvas"></canvas>
+      <div class="print-title" id="printTitle"></div>
+      <div class="maze-wrap"><canvas id="mazeCanvas"></canvas></div>
     </div>
     <div class="toast" id="toast"></div>
   </div>
@@ -859,6 +865,7 @@ function showResult() {
   const { sh, lv, seed, ev } = current;
   const id = mazeIdString(sh, lv, seed);
   document.getElementById('mazeId').textContent = 'No. ' + id;
+  document.getElementById('printTitle').textContent = sh.name + 'の めいろ';
   const m = ev.effort / BASE_EFFORT;
   infoEl.innerHTML =
     `${R('番号', 'ばんごう')}：<b>${id}</b>（${sh.name}・${LEVELS[lv].name}）<br>` +
@@ -950,7 +957,6 @@ function drawMaze() {
   ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
   renderMaze(ctx, cell, showAnswer);
   fitCanvas();
-  canvas.classList.toggle('tall', H / W > 265 / 190);
 }
 function fitCanvas() {
   if (!current) return;
