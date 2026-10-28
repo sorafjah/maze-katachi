@@ -59,11 +59,7 @@
   .group { display: flex; flex-direction: column; gap: 6px; }
   .label { font-size: 0.85rem; font-weight: 700; color: var(--sub); letter-spacing: 0.05em; }
 
-  .shapes { display: flex; flex-wrap: wrap; gap: 8px 12px; }
-  .season { display: flex; flex-direction: column; gap: 4px; flex: 0 1 auto; }
-  .season.all { flex-basis: 100%; }
-  .season-name { font-size: 0.78rem; font-weight: 700; color: var(--accent-dark); }
-  .season-grid { display: flex; flex-wrap: wrap; gap: 5px; }
+  .shapes { display: flex; flex-wrap: wrap; gap: 5px; }
   .shape-btn {
     background: var(--panel);
     border: 2px solid var(--line);
@@ -84,7 +80,6 @@
   }
   .shape-btn canvas { width: 34px; height: 34px; display: block; }
   .shape-btn.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-dark); }
-  .shape-btn .omakase { width: 34px; height: 34px; display: grid; place-items: center; font-size: 1.6rem; color: var(--accent); font-weight: 700; }
 
   .levels { display: grid; grid-template-columns: repeat(5, 1fr); border: 2px solid var(--accent); border-radius: 10px; overflow: hidden; }
   .level-btn {
@@ -184,8 +179,6 @@
       <button class="btn main" id="genBtn">つくる</button>
       <button class="btn" id="answerBtn">こたえ</button>
       <button class="btn" id="printBtn"><ruby>印刷<rt>いんさつ</rt></ruby></button>
-      <button class="btn small" id="fileBtn"><ruby>印刷用<rt>いんさつよう</rt></ruby>ファイル</button>
-      <button class="btn small" id="copyBtn">HTMLをコピー</button>
     </div>
 
     <div class="group">
@@ -308,40 +301,16 @@ const SH = (() => {
     { id: 'star', cat: 'いつも', s: [0, -1.1], t: [0.65, 1.0], code: 'ST', name: 'ほし', box: [-1.3, -1.3, 1.3, 1.3],
       f: (x, y) => P(x, y, star, 0.07) },
     // ---- はる ----
-    { id: 'sakura', cat: 'はる', s: [0, -1.2], t: [0.75, 1.0], code: 'SA', name: 'さくら', box: [-1.3, -1.3, 1.3, 1.3],
-      f: (x, y) => {
-        if (C(x, y, 0, 0.05, 0.3)) return true;
-        for (let k = 0; k < 5; k++) {
-          const a = -Math.PI / 2 + k * 2 * Math.PI / 5;
-          const ca = Math.cos(a), sa = Math.sin(a);
-          if (E(x, y, 0.66 * ca, 0.05 + 0.66 * sa, 0.46, 0.33, a)
-              && !C(x, y, 1.14 * ca, 0.05 + 1.14 * sa, 0.17)) return true;
-        }
-        return false;
-      } },
     { id: 'tulip', cat: 'はる', s: [-0.6, -1.2], t: [0, 1.3], code: 'TU', name: 'チューリップ', box: [-1.2, -1.4, 1.2, 1.4],
       f: (x, y) => (E(x, y, 0, -0.38, 0.62, 0.6) && y >= -0.42)
         || P(x, y, [[-0.62, -0.42], [-0.6, -1.08], [-0.28, -0.72], [0, -1.12], [0.28, -0.72], [0.6, -1.08], [0.62, -0.42]], 0)
         || R(x, y, -0.13, 0.1, 0.13, 1.15)
         || E(x, y, -0.42, 0.62, 0.42, 0.17, 0.6)
         || E(x, y, 0.42, 0.72, 0.42, 0.17, -0.6) },
-    // ---- なつ ----
-    { id: 'ice', cat: 'なつ', s: [0, -1.4], t: [0, 1.4], code: 'IC', name: 'アイス', box: [-1.2, -1.5, 1.2, 1.5],
-      f: (x, y) => E(x, y, 0, -0.32, 0.72, 0.34) || E(x, y, 0, -0.72, 0.52, 0.28) || E(x, y, 0, -1.02, 0.28, 0.22)
-        || P(x, y, [[-0.6, -0.12], [0.6, -0.12], [0, 1.25]], 0.05) },
-    { id: 'suika', cat: 'なつ', s: [-1.25, -0.1], t: [1.25, -0.1], code: 'SU', name: 'すいか', box: [-1.4, -1.4, 1.4, 1.4],
-      f: (x, y) => C(x, y, 0, -0.35, 1.25) && y >= -0.35 },
     // ---- あき・ハロウィン ----
     { id: 'acorn', cat: 'あき', s: [0, -1.1], t: [0, 1.1], code: 'DG', name: 'どんぐり', box: [-1.0, -1.2, 1.0, 1.2],
       f: (x, y) => E(x, y, 0, -0.35, 0.72, 0.38) || R(x, y, -0.13, -0.95, 0.13, -0.6)
         || (E(x, y, 0, 0.12, 0.58, 0.85) && y >= -0.35) },
-    { id: 'ginkgo', cat: 'あき', s: [-1.0, -0.7], t: [0, 1.2], code: 'IT', name: 'いちょう', box: [-1.6, -1.4, 1.6, 1.4],
-      f: (x, y) => {
-        const dx = x, dy = y - 0.75, r = Math.sqrt(dx * dx + dy * dy);
-        const ang = Math.atan2(dx, -dy);
-        const fan = r <= 1.65 && Math.abs(ang) <= 0.95 && !(Math.abs(dx) < 0.13 && y < -0.4);
-        return fan || R(x, y, -0.12, 0.4, 0.12, 1.2);
-      } },
     { id: 'pumpkin', cat: 'あき', s: [0.1, -1.1], t: [0, 1.0], code: 'PK', name: 'かぼちゃ', box: [-1.4, -1.3, 1.4, 1.2],
       f: (x, y) => {
         const body = E(x, y, -0.5, 0.12, 0.62, 0.75) || E(x, y, 0.5, 0.12, 0.62, 0.75) || E(x, y, 0, 0.12, 0.72, 0.8);
@@ -360,9 +329,6 @@ const SH = (() => {
         return (body || arms) && !eyes;
       } },
     // ---- ふゆ・クリスマス ----
-    { id: 'mitten', cat: 'ふゆ', s: [0.1, -1.0], t: [0.0, 1.0], code: 'MI', name: 'てぶくろ', box: [-1.2, -1.2, 1.0, 1.2],
-      f: (x, y) => RR(x, y, -0.45, -0.95, 0.6, 0.55, 0.5) || E(x, y, -0.62, -0.02, 0.22, 0.42, -0.55)
-        || R(x, y, -0.55, 0.48, 0.7, 0.95) },
     { id: 'tree', cat: 'ふゆ', s: [0, -1.4], t: [0, 1.1], code: 'XT', name: 'ツリー', box: [-1.2, -1.5, 1.2, 1.1],
       f: (x, y) => C(x, y, 0, -1.12, 0.2)
         || P(x, y, [[0, -1.0], [0.5, -0.42], [-0.5, -0.42]], 0.04)
@@ -752,7 +718,7 @@ const LEVELS = [
   { name: 'げきむず',   area: 1900, mult: 3,    iters: 250000 },
 ];
 
-let shapeSel = 'heart';   // 'random' もある
+let shapeSel = 'heart';
 let levelSel = 1;
 let showAnswer = false;
 let current = null;
@@ -786,25 +752,6 @@ function drawIcon(cv, sh) {
 
 function buildUI() {
   const box = document.getElementById('shapes');
-  const SEASONS = [
-    ['いつも', 'いつでも'],
-    ['はる', R('春', 'はる')],
-    ['なつ', R('夏', 'なつ')],
-    ['あき', R('秋', 'あき') + '・ハロウィン'],
-    ['ふゆ', R('冬', 'ふゆ') + '・クリスマス'],
-  ];
-  const grids = {};
-  for (const [key, label] of SEASONS) {
-    const sec = document.createElement('div'); sec.className = 'season' + (key === 'いつも' ? ' all' : '');
-    const h = document.createElement('div'); h.className = 'season-name'; h.innerHTML = label;
-    const gr = document.createElement('div'); gr.className = 'season-grid';
-    sec.append(h, gr); box.appendChild(sec); grids[key] = gr;
-  }
-  const rb = document.createElement('button');
-  rb.className = 'shape-btn'; rb.dataset.id = 'random';
-  rb.innerHTML = '<span class="omakase">？</span><span>おまかせ</span>';
-  rb.addEventListener('click', () => { shapeSel = 'random'; store('shape', 'random'); syncUI(); regenerate(); });
-  grids['いつも'].appendChild(rb);
   for (const sh of SH) {
     const b = document.createElement('button');
     b.className = 'shape-btn'; b.dataset.id = sh.id;
@@ -813,7 +760,7 @@ function buildUI() {
     const t = document.createElement('span'); t.textContent = sh.name;
     b.append(cv, t);
     b.addEventListener('click', () => { shapeSel = sh.id; store('shape', sh.id); syncUI(); regenerate(); });
-    grids[sh.cat].appendChild(b);
+    box.appendChild(b);
   }
 
   const lv = document.getElementById('levels');
@@ -865,7 +812,7 @@ function getGrid(sh, lv) {
 // つくる
 // ============================================================
 function setBusy(b) {
-  ['genBtn', 'printBtn', 'fileBtn', 'copyBtn', 'recallBtn'].forEach(id => document.getElementById(id).disabled = b);
+  ['genBtn', 'printBtn', 'recallBtn'].forEach(id => document.getElementById(id).disabled = b);
 }
 
 function regenerate(forced) {
@@ -873,9 +820,7 @@ function regenerate(forced) {
   let sh, lv = levelSel, seed;
   if (forced) { sh = forced.sh; lv = forced.lv; seed = forced.seed; }
   else {
-    sh = shapeSel === 'random'
-      ? SH[Math.floor(Math.random() * SH.length)]
-      : SH.find(s => s.id === shapeSel);
+    sh = SH.find(s => s.id === shapeSel) || SH[0];
     seed = Math.floor(Math.random() * 10000);
   }
   const L = LEVELS[lv];
@@ -1017,67 +962,6 @@ function fitCanvas() {
 }
 
 // ============================================================
-// 印刷用ファイル（ブラウザで開いて印刷するHTML）
-// ============================================================
-function printableHTML() {
-  const { sh, lv, seed } = current;
-  const id = mazeIdString(sh, lv, seed);
-  const url = canvas.toDataURL('image/png');
-  const W = canvas.width, H = canvas.height;
-  const tall = H / W > 265 / 190;
-  const imgCss = tall ? 'height:265mm;width:auto;' : 'width:190mm;height:auto;';
-  return `<!DOCTYPE html>
-<html lang="ja"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>カタチめいろ ${id}${showAnswer ? ' こたえ' : ''}</title>
-<style>
-@page { size: A4 portrait; margin: 5mm 5mm 5mm 15mm; }
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", sans-serif; font-size: 12pt; color: #000; background: #fff; padding: 10px; }
-.head { display: flex; align-items: baseline; gap: 4mm; width: 190mm; max-width: 100%; margin-bottom: 4mm; }
-.line { flex: 1; border-bottom: 1.5px solid #000; min-height: 1.3em; }
-.id { font-weight: 700; border-bottom: 1.5px solid #000; padding: 0 1mm; white-space: nowrap; }
-.ans { font-weight: 700; border: 1.5px solid #000; padding: 0 3mm; }
-img { display: block; ${imgCss} max-width: 100%; }
-.bar { margin-bottom: 12px; }
-.bar button { font-size: 18px; padding: 10px 24px; min-height: 44px; border-radius: 10px; border: 2px solid #13806f; background: #13806f; color: #fff; font-family: inherit; font-weight: 700; }
-@media print { body { padding: 0; } .bar { display: none; } img { max-width: none; } }
-</style></head><body>
-<div class="bar"><button onclick="window.print()">いんさつする</button></div>
-<div class="head"><span>なまえ：</span><span class="line"></span><span class="id">No. ${id}</span>${showAnswer ? '<span class="ans">こたえ</span>' : ''}</div>
-<img src="${url}" alt="カタチめいろ ${id}">
-</body></html>`;
-}
-
-function downloadPrintable() {
-  if (!current) return;
-  const html = printableHTML();
-  const blob = new Blob([html], { type: 'text/html' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'katachi-' + mazeIdString(current.sh, current.lv, current.seed) + (showAnswer ? '-kotae' : '') + '.html';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  toast('ファイルをほぞんしたよ。ひらいて いんさつしてね');
-}
-
-function copyHTML() {
-  if (!current) return;
-  const ta = document.createElement('textarea');
-  ta.value = printableHTML();
-  ta.setAttribute('readonly', '');
-  ta.style.position = 'fixed'; ta.style.top = '-1000px';
-  document.body.appendChild(ta);
-  ta.select(); ta.setSelectionRange(0, ta.value.length);
-  let ok = false;
-  try { ok = document.execCommand('copy'); } catch (e) {}
-  ta.remove();
-  toast(ok ? 'HTMLをコピーしたよ' : 'コピーできなかったよ');
-}
-
-// ============================================================
 // 番号から よびだす
 // ============================================================
 function recallById() {
@@ -1124,8 +1008,6 @@ document.getElementById('answerBtn').addEventListener('click', toggleAnswer);
 document.getElementById('printBtn').addEventListener('click', () => {
   try { window.print(); } catch (e) {}
 });
-document.getElementById('fileBtn').addEventListener('click', downloadPrintable);
-document.getElementById('copyBtn').addEventListener('click', copyHTML);
 document.getElementById('recallBtn').addEventListener('click', recallById);
 document.getElementById('idInput').addEventListener('keydown', e => { if (e.key === 'Enter') recallById(); });
 
@@ -1133,7 +1015,7 @@ let resizeTimer;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(fitCanvas, 120); });
 
 (function init() {
-  const s = load('shape'); if (s && (s === 'random' || SH.some(x => x.id === s))) shapeSel = s;
+  const s = load('shape'); if (s && SH.some(x => x.id === s)) shapeSel = s;
   const l = parseInt(load('level'), 10); if (l >= 0 && l < LEVELS.length) levelSel = l;
   buildUI();
   syncUI();
