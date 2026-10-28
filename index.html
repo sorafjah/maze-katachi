@@ -91,7 +91,7 @@
   .modes { grid-template-columns: 1fr 1fr; }
   .mode-btn { font-size: 0.9rem; }
   .level-btn[hidden], .shape-btn[hidden], .group[hidden] { display: none; }
-  .dir-btn { font-size: 0.82rem; }
+  .dir-btn { font-size: 0.9rem; }
   .level-btn small { display: block; font-size: 0.65rem; font-weight: 400; }
   .level-btn.active { background: var(--accent); color: #fff; }
 
@@ -189,10 +189,10 @@
     </div>
 
     <div class="group" id="dirGroup">
-      <div class="label">ぐるぐるの<ruby>向<rt>む</rt></ruby>き</div>
+      <div class="label">ゴール</div>
       <div class="levels modes">
-        <button class="level-btn mode-btn dir-btn" data-dir="in">そと → まんなか</button>
-        <button class="level-btn mode-btn dir-btn" data-dir="out">まんなか → そと</button>
+        <button class="level-btn mode-btn dir-btn" data-dir="in">まんなか</button>
+        <button class="level-btn mode-btn dir-btn" data-dir="edge">そと</button>
       </div>
     </div>
 
@@ -924,14 +924,30 @@ function makeRingGraph(sh, area) {
   return { n, x, y, nbr, kind: 'ring', geo, px, py, tm, pm, link, unit };
 }
 
-function pickEndsRing(g, sh) {
+// dir 'in'：外から入って、まんなかがゴール / 'edge'：外から入って、外の別のところから出る
+function pickEndsRing(g, sh, dir) {
   const out = g.geo.rings[g.geo.N - 1];
-  let s = out[0], bd = Infinity;
-  for (const i of out) {
-    const d = (g.px[i] - sh.ring.s[0]) ** 2 + (g.py[i] - sh.ring.s[1]) ** 2;
-    if (d < bd) { bd = d; s = i; }
+  const nearest = (px, py) => {
+    let best = out[0], bd = Infinity;
+    for (const i of out) {
+      const d = (g.px[i] - px) ** 2 + (g.py[i] - py) ** 2;
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best;
+  };
+  const s = nearest(sh.ring.s[0], sh.ring.s[1]);
+  if (dir !== 'edge') return { s, t: 0 };
+  // 出口：形ごとの目安があればそこ、なければ入口からいちばん遠いところ
+  let t;
+  if (sh.t && !sh.guruOnly) t = nearest(sh.t[0], sh.t[1]);
+  else {
+    let bd = -1;
+    for (const i of out) {
+      const d = (g.px[i] - g.px[s]) ** 2 + (g.py[i] - g.py[s]) ** 2;
+      if (d > bd) { bd = d; t = i; }
+    }
   }
-  return { s, t: 0 };
+  return { s, t, edge: true };
 }
 
 
@@ -950,7 +966,7 @@ const LEVELS = [
 ];
 
 let shapeSel = 'heart';
-let guruDir = 'in';       // ぐるぐるの向き 'in' そと→まんなか / 'out' まんなか→そと
+let guruDir = 'in';       // ぐるぐるのゴール 'in' そと→まんなか / 'edge' そと→そと
 let modeSel = 'kaku';     // 'kaku' カクカク / 'guru' ぐるぐる
 const GURU_MAX_LV = 2;     // ぐるぐるは「ちょいむず」まで（それより上は線がこみあって読みにくい）
 let levelSel = 1;
@@ -1000,7 +1016,7 @@ function buildUI() {
 
   document.querySelectorAll('.dir-btn').forEach(b => b.addEventListener('click', () => {
     guruDir = b.dataset.dir; store('dir', guruDir); syncUI();
-    if (current && current.mode === 'guru') { current.dir = guruDir; drawMaze(); showResult(); }
+    if (modeSel === 'guru') regenerate();
   }));
   document.querySelectorAll('.mode-btn:not(.dir-btn)').forEach(b => b.addEventListener('click', () => {
     modeSel = b.dataset.mode; store('mode', modeSel);
@@ -1042,13 +1058,13 @@ function toast(msg) {
 }
 
 // ============================================================
-// 番号：かたちのコード＋（ぐるぐるは G、まんなかから外へは O）＋むずかしさ（1〜5）＋4けた。例 HA3-0482 / HAG3-0482
+// 番号：かたちのコード＋（ぐるぐるは G、そと→そとは E）＋むずかしさ（1〜5）＋4けた。例 HA3-0482 / HAG3-0482
 // ============================================================
 function mazeIdString(sh, lv, seed, mode, dir) {
-  return sh.code + (mode === 'guru' ? (dir === 'out' ? 'O' : 'G') : '') + (lv + 1) + '-' + String(seed).padStart(4, '0');
+  return sh.code + (mode === 'guru' ? (dir === 'edge' ? 'E' : 'G') : '') + (lv + 1) + '-' + String(seed).padStart(4, '0');
 }
-function seedFor(sh, lv, seed, mode) {
-  let h = Math.imul(seed + 1, 2654435761) ^ Math.imul(sh.code.charCodeAt(0) * 31 + sh.code.charCodeAt(1) + lv * 977 + (mode === 'guru' ? 50021 : 0), 40503);
+function seedFor(sh, lv, seed, mode, dir) {
+  let h = Math.imul(seed + 1, 2654435761) ^ Math.imul(sh.code.charCodeAt(0) * 31 + sh.code.charCodeAt(1) + lv * 977 + (mode === 'guru' ? 50021 : 0) + (mode === 'guru' && dir === 'edge' ? 7919 : 0), 40503);
   h = Math.imul(h ^ (h >>> 15), 2246822519);
   h = Math.imul(h ^ (h >>> 13), 3266489917);
   return (h ^ (h >>> 16)) >>> 0;
@@ -1056,11 +1072,12 @@ function seedFor(sh, lv, seed, mode) {
 
 // かたち・むずかしさごとのマス目は使い回す
 const gridCache = {};
-function getGrid(sh, lv, mode) {
-  const key = sh.id + lv + mode;
+function getGrid(sh, lv, mode, dir) {
+  const key = sh.id + lv + mode + (mode === 'guru' ? dir : '');
   if (!gridCache[key] && mode === 'guru') {
-    const g = makeRingGraph(sh, LEVELS[lv].area);
-    gridCache[key] = { g, ends: pickEndsRing(g, sh) };
+    const other = gridCache[sh.id + lv + mode + (dir === 'edge' ? 'in' : 'edge')];
+    const g = other ? other.g : makeRingGraph(sh, LEVELS[lv].area);
+    gridCache[key] = { g, ends: pickEndsRing(g, sh, dir) };
   }
   if (!gridCache[key]) {
     const { mask, cols, rows, toGrid } = rasterize(sh, LEVELS[lv].area);
@@ -1087,8 +1104,8 @@ function regenerate(forced) {
     seed = Math.floor(Math.random() * 10000);
   }
   const L = LEVELS[lv];
-  const { g, ends } = getGrid(sh, lv, mode);
-  const rng = makeRng(seedFor(sh, lv, seed, mode));
+  const { g, ends } = getGrid(sh, lv, mode, dir);
+  const rng = makeRng(seedFor(sh, lv, seed, mode, dir));
   const open = carveTree(g, rng, ends.t, 0.25);
   const target = BASE_EFFORT * L.mult;
   const opt = createOptimizer(g, open, ends.s, ends.t, { rng, target, maxIters: L.iters });
@@ -1125,7 +1142,7 @@ function showResult() {
   document.getElementById('printTitle').textContent = sh.name + 'の めいろ';
   const m = ev.effort / BASE_EFFORT;
   infoEl.innerHTML =
-    `${R('番号', 'ばんごう')}：<b>${id}</b>（${sh.name}・${mode === 'guru' ? (dir === 'out' ? 'ぐるぐる・まんなかから' : 'ぐるぐる・まんなかへ') : 'カクカク'}・${LEVELS[lv].name}）<br>` +
+    `${R('番号', 'ばんごう')}：<b>${id}</b>（${sh.name}・${mode === 'guru' ? (dir === 'edge' ? 'ぐるぐる・そとからそとへ' : 'ぐるぐる・まんなかへ') : 'カクカク'}・${LEVELS[lv].name}）<br>` +
     `むずかしさ：ムズめいろの「ちょいむず」の <b>${R('約', 'やく')}${m.toFixed(1)}${R('倍', 'ばい')}</b><br>` +
     `${R('正解', 'せいかい')}の${R('道', 'みち')} ${ev.pathLen}マス・${R('部屋', 'へや')} ${current.g.n}マス`;
 }
@@ -1273,10 +1290,13 @@ function drawRingMaze() {
   }
   c.fillStyle = '#fff'; c.fill(outline);
 
-  // まんなか（ゴール）をうすいグレーに
-  const center = new Path2D();
-  arcTo(center, G.rho(1), 0, 2 * Math.PI, true); center.closePath();
-  c.fillStyle = '#e2e2e2'; c.fill(center);
+  // まんなか（ゴール）をうすいグレーに（そと→そとのときは、ふつうの部屋）
+  const edge = !!ends.edge;
+  if (!edge) {
+    const center = new Path2D();
+    arcTo(center, G.rho(1), 0, 2 * Math.PI, true); center.closePath();
+    c.fillStyle = '#e2e2e2'; c.fill(center);
+  }
 
   // こたえ：わにそって進み、となりのわへはまっすぐうつる
   if (showAnswer && path) {
@@ -1289,11 +1309,17 @@ function drawRingMaze() {
     { const [x, y] = Q(ct, cp); ap.lineTo(x, y); }
     for (let q = 1; q < path.length; q++) {
       const u = path[q - 1], v = path[q];
-      if (v === 0) {
+      if (v === 0) {                       // まんなかへ入る
         const ang = short(ct, g.link.get(u + ',' + v));
         arcTo(ap, cp, ct, ang, false);
         const [x, y] = P(G.cx, G.cy); ap.lineTo(x, y);
-        break;
+        continue;
+      }
+      if (u === 0) {                       // まんなかから出る
+        ct = g.link.get(u + ',' + v); cp = g.pm[v];
+        const [x, y] = Q(ct, cp); ap.lineTo(x, y);
+        const to = short(ct, g.tm[v]); arcTo(ap, cp, ct, to, false); ct = to;
+        continue;
       }
       if (G.cells[u].k === G.cells[v].k) {
         const to = short(ct, g.tm[v]); arcTo(ap, cp, ct, to, false); ct = to;
@@ -1304,6 +1330,7 @@ function drawRingMaze() {
         const to = short(ct, g.tm[v]); arcTo(ap, cp, ct, to, false); ct = to;
       }
     }
+    if (edge) { const [x, y] = Q(ct, 1 + 0.9 * G.th); ap.lineTo(x, y); }   // 出口から外へ
     c.strokeStyle = '#9a9a9a';
     c.lineWidth = Math.max(3, U * 0.42);
     c.stroke(ap);
@@ -1335,8 +1362,8 @@ function drawRingMaze() {
         const [a, b] = Q(cl.b, G.rho(kk)), [e, f] = Q(cl.b, G.rho(kk + 1));
         inner.moveTo(a, b); inner.lineTo(e, f);
       }
-      // いちばん外のわ：外がわの線（スタートのところはあける）
-      if (kk === N - 1 && i !== ends.s) arcTo(outer, 1, cl.a, cl.b, true);
+      // いちばん外のわ：外がわの線（入口と出口はあける）
+      if (kk === N - 1 && i !== ends.s && !(edge && i === ends.t)) arcTo(outer, 1, cl.a, cl.b, true);
     }
   }
   c.strokeStyle = '#000';
@@ -1344,29 +1371,31 @@ function drawRingMaze() {
   c.lineWidth = wall; c.stroke(inner);
   c.lineWidth = wall * 1.7; c.stroke(outer);
 
-  // ゴールの文字
-  let rmin = Infinity; for (let m = 0; m < RING_A; m += 8) rmin = Math.min(rmin, Rt[m]);
-  const cr = G.rho(1) * rmin * k;
-  const fs = Math.max(9, Math.min(cr * 0.62, 26));
-  const [gx, gy] = P(G.cx, G.cy);
-  c.fillStyle = '#000';
-  c.font = `700 ${fs}px "BIZ UDPGothic", sans-serif`;
-  c.textAlign = 'center'; c.textBaseline = 'middle';
-  // まんなかの文字は、まんなかの部屋に入る大きさにする
-  const label = current.dir === 'out' ? 'スタート' : 'ゴール';
-  let fsz = Math.min(cr * 0.62, 26);
-  c.font = `700 ${fsz}px "BIZ UDPGothic", sans-serif`;
-  const tw = c.measureText(label).width;
-  if (tw > cr * 1.5) fsz *= cr * 1.5 / tw;
-  c.font = `700 ${Math.max(8, fsz)}px "BIZ UDPGothic", sans-serif`;
-  c.fillText(label, gx, gy);
+  // まんなかの「ゴール」の文字（まんなかの部屋に入る大きさにする）
+  if (!edge) {
+    let rmin = Infinity; for (let m = 0; m < RING_A; m += 8) rmin = Math.min(rmin, Rt[m]);
+    const cr = G.rho(1) * rmin * k;
+    let fsz = Math.min(cr * 0.62, 26);
+    c.font = `700 ${fsz}px "BIZ UDPGothic", sans-serif`;
+    const tw = c.measureText('ゴール').width;
+    if (tw > cr * 1.5) fsz *= cr * 1.5 / tw;
+    c.font = `700 ${Math.max(8, fsz)}px "BIZ UDPGothic", sans-serif`;
+    c.fillStyle = '#000';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    const [gx, gy] = P(G.cx, G.cy);
+    c.fillText('ゴール', gx, gy);
+  }
 
-  // 外がわの矢印（まんなかへ行くときは中向き、外へ出るときは外向き）
+  // 矢印：入口は中向き、出口は外向き
   const size = Math.max(20, Math.min(U * 2.2, 48));
-  const ts = g.tm[ends.s];
-  const [bx, by] = Q(ts, 1);
   const off = size * 0.5 + wall * 2;
-  drawArrow(c, bx + Math.cos(ts) * off, by + Math.sin(ts) * off, size, current.dir === 'out' ? ts - Math.PI / 2 : ts + Math.PI / 2);
+  const arrow = (i, inward) => {
+    const ta = g.tm[i];
+    const [bx, by] = Q(ta, 1);
+    drawArrow(c, bx + Math.cos(ta) * off, by + Math.sin(ta) * off, size, inward ? ta + Math.PI / 2 : ta - Math.PI / 2);
+  };
+  arrow(ends.s, true);
+  if (edge) arrow(ends.t, false);
 }
 
 function fitCanvas() {
@@ -1385,7 +1414,7 @@ function recallById() {
   const raw = document.getElementById('idInput').value.trim().toUpperCase()
     .replace(/[Ａ-Ｚ０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
     .replace(/[－ー‐―−]/g, '-');
-  const m = raw.match(/^([A-Z]{2})([GO]?)([1-5])-?(\d{1,4})$/);
+  const m = raw.match(/^([A-Z]{2})([GE]?)([1-5])-?(\d{1,4})$/);
   const sh = m && SH.find(s => s.code === m[1]);
   const mode = m && m[2] ? 'guru' : 'kaku';
   if (!sh || (mode === 'guru' && (+m[3] - 1 > GURU_MAX_LV || !sh.ring)) || (mode === 'kaku' && sh.guruOnly)) {
@@ -1393,7 +1422,7 @@ function recallById() {
     return;
   }
   shapeSel = sh.id; levelSel = +m[3] - 1; modeSel = mode;
-  if (mode === 'guru') guruDir = m[2] === 'O' ? 'out' : 'in';
+  if (mode === 'guru') guruDir = m[2] === 'E' ? 'edge' : 'in';
   syncUI();
   regenerate({ sh, lv: levelSel, seed: parseInt(m[4], 10), mode, dir: guruDir });
 }
@@ -1435,7 +1464,7 @@ window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer
 
 (function init() {
   const s = load('shape'); if (s && SH.some(x => x.id === s)) shapeSel = s;
-  const dd = load('dir'); if (dd === 'in' || dd === 'out') guruDir = dd;
+  const dd = load('dir'); if (dd === 'in' || dd === 'edge') guruDir = dd;
   const md = load('mode'); if (md === 'guru' || md === 'kaku') modeSel = md;
   const l = parseInt(load('level'), 10); if (l >= 0 && l < LEVELS.length) levelSel = l;
   if (modeSel === 'guru' && levelSel > GURU_MAX_LV) levelSel = GURU_MAX_LV;
