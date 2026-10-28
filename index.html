@@ -89,7 +89,7 @@
   .level-btn:last-child { border-right: none; }
   .modes { grid-template-columns: 1fr 1fr; }
   .mode-btn { font-size: 0.9rem; }
-  .level-btn[hidden] { display: none; }
+  .level-btn[hidden], .shape-btn[hidden] { display: none; }
   .level-btn small { display: block; font-size: 0.65rem; font-weight: 400; }
   .level-btn.active { background: var(--accent); color: #fff; }
 
@@ -182,7 +182,7 @@
       <div class="label">めいろの<ruby>線<rt>せん</rt></ruby></div>
       <div class="levels modes" id="modes">
         <button class="level-btn mode-btn" data-mode="kaku">カクカク</button>
-        <button class="level-btn mode-btn" data-mode="kune">くねくね</button>
+        <button class="level-btn mode-btn" data-mode="guru">ぐるぐる</button>
       </div>
     </div>
 
@@ -277,11 +277,14 @@ const SH = (() => {
     return pts;
   }
   const star = starPts(0, 0.08, 1.0, 0.52, 5);
+  const starRing = starPts(0, 0.1, 0.95, 0.6, 5);   // ぐるぐる用（先がほそくなりすぎないように）
 
   return [
-    { id: 'heart', cat: 'いつも', s: [-0.55, -1.0], t: [0, 1.3], code: 'HA', name: 'ハート', box: [-1.5, -1.5, 1.5, 1.5],
+    { id: 'heart', ring: { c: [0, 0.05], s: [-0.55, -1.0], f: null, smooth: 5 }, cat: 'いつも', s: [-0.55, -1.0], t: [0, 1.3], code: 'HA', name: 'ハート', box: [-1.5, -1.5, 1.5, 1.5],
       f: (x, y) => { const X = x / 1.05, Y = -(y * 1.05) + 0.1; const a = X * X + Y * Y - 1; return a * a * a - X * X * Y * Y * Y <= 0; } },
-    { id: 'apple', cat: 'いつも', s: [0, -1.1], t: [0, 1.2], code: 'AP', name: 'リンゴ', box: [-1.4, -1.4, 1.4, 1.4],
+    { id: 'apple', ring: { c: [0, 0.22], s: [-1.0, -0.2], smooth: 4,
+        f: (x, y) => (C(x, y, -0.36, 0.12, 0.72) || C(x, y, 0.36, 0.12, 0.72) || E(x, y, 0, 0.42, 0.85, 0.62)) && !C(x, y, 0, -0.72, 0.2),
+        deco: [{ t: 'rect', x0: -0.11, y0: -1.0, x1: 0.11, y1: -0.45 }, { t: 'ell', cx: 0.38, cy: -0.86, rx: 0.36, ry: 0.17, a: -0.5 }] }, cat: 'いつも', s: [0, -1.1], t: [0, 1.2], code: 'AP', name: 'リンゴ', box: [-1.4, -1.4, 1.4, 1.4],
       f: (x, y) => (C(x, y, -0.36, 0.12, 0.72) || C(x, y, 0.36, 0.12, 0.72) || E(x, y, 0, 0.42, 0.85, 0.62))
         && !C(x, y, 0, -0.72, 0.2)
         || R(x, y, -0.11, -1.0, 0.11, -0.5)
@@ -315,7 +318,7 @@ const SH = (() => {
       f: (x, y) => E(x, y, 0, 0.52, 0.8, 0.62)
         || E(x, y, -0.36, -0.5, 0.25, 0.68, -0.12)
         || E(x, y, 0.36, -0.5, 0.25, 0.68, 0.12) },
-    { id: 'star', cat: 'いつも', s: [0, -1.1], t: [0.65, 1.0], code: 'ST', name: 'ほし', box: [-1.3, -1.3, 1.3, 1.3],
+    { id: 'star', ring: { c: [0, 0.1], s: [0, -1.1], f: (x, y) => P(x, y, starRing, 0.12), smooth: 4 }, cat: 'いつも', s: [0, -1.1], t: [0.65, 1.0], code: 'ST', name: 'ほし', box: [-1.3, -1.3, 1.3, 1.3],
       f: (x, y) => P(x, y, star, 0.07) },
     // ---- はる ----
     { id: 'tulip', cat: 'はる', s: [-0.6, -1.2], t: [0, 1.3], code: 'TU', name: 'チューリップ', box: [-1.2, -1.4, 1.2, 1.4],
@@ -328,7 +331,9 @@ const SH = (() => {
     { id: 'acorn', cat: 'あき', s: [0, -1.1], t: [0, 1.1], code: 'DG', name: 'どんぐり', box: [-1.0, -1.2, 1.0, 1.2],
       f: (x, y) => E(x, y, 0, -0.35, 0.72, 0.38) || R(x, y, -0.13, -0.95, 0.13, -0.6)
         || (E(x, y, 0, 0.12, 0.58, 0.85) && y >= -0.35) },
-    { id: 'pumpkin', cat: 'あき', s: [0.1, -1.1], t: [0, 1.0], code: 'PK', name: 'かぼちゃ', box: [-1.4, -1.3, 1.4, 1.2],
+    { id: 'pumpkin', ring: { c: [0, 0.12], s: [-0.7, -0.45], smooth: 5,
+        f: (x, y) => E(x, y, -0.5, 0.12, 0.62, 0.75) || E(x, y, 0.5, 0.12, 0.62, 0.75) || E(x, y, 0, 0.12, 0.72, 0.8),
+        deco: [{ t: 'poly', p: [[-0.14, -0.6], [0.14, -0.6], [0.3, -1.0], [0.04, -1.0]] }] }, cat: 'あき', s: [0.1, -1.1], t: [0, 1.0], code: 'PK', name: 'かぼちゃ', box: [-1.4, -1.3, 1.4, 1.2],
       f: (x, y) => {
         const body = E(x, y, -0.5, 0.12, 0.62, 0.75) || E(x, y, 0.5, 0.12, 0.62, 0.75) || E(x, y, 0, 0.12, 0.72, 0.8);
         const stem = P(x, y, [[-0.14, -0.55], [0.14, -0.55], [0.3, -1.0], [0.04, -1.0]], 0);
@@ -357,6 +362,7 @@ const SH = (() => {
         || RR(x, y, -0.4, 0.0, 0.98, 0.72, 0.36) },
   ];
 })();
+for (const sh of SH) if (sh.ring && !sh.ring.f) sh.ring.f = sh.f;
 
 // 形を細かく測って、実際に形がある範囲と、範囲の中で形がしめる割合を出す
 function measureShape(sh) {
@@ -721,112 +727,163 @@ function createOptimizer(g, open, s, t, opts) {
 }
 
 // ============================================================
-// くねくね迷路：六角形（上下がたいらな向き）の部屋で型抜きする
-//  中心 x = 1.5 s q, y = √3 s (r + q/2)（形の座標そのまま）
-//  向き d（0〜5）は角度 30°+60°d（0右下 1下 2左下 3左上 4上 5右上）
-//  角 k は角度 60°k。向き d のかべは 角 d と 角 d+1 のあいだ
+// ぐるぐる迷路：形の輪郭と同じかたちの線が、まんなかに向かって何重にも入る迷路
+//  まんなかの点から見た「輪郭までのきょり R(θ)」を使い、
+//  ρ（0=まんなか、1=輪郭）が同じ線を「わ」として部屋を区切る
+//  ゴールはまんなかの部屋。スタートは外がわ
+//  ring: { c:[x,y] まんなか, f: 迷路にする本体（軸や葉は入れない）, s:[x,y] スタートの目安, deco: かざり }
 // ============================================================
-const HEX_D = [[1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1], [1, -1]];
-const HEX_ANG = d => (30 + 60 * d) * Math.PI / 180;
+const RING_A = 1440;          // 角度の分けかた
+const RING_C0 = 1.6;          // まんなかの部屋の大きさ（わ1本ぶんを1とする）
 
-function makeHexGraph(sh, area) {
-  const m = measureShape(sh);
-  const shapeArea = m.fill * (m.x1 - m.x0) * (m.y1 - m.y0);
-  const s = Math.sqrt(shapeArea / area / (3 * Math.sqrt(3) / 2));
-  const R3 = Math.sqrt(3);
-  const key = (q, r) => q * 100000 + r;
-  let cells = new Map();
-  const q0 = Math.floor(m.x0 / (1.5 * s)) - 1, q1 = Math.ceil(m.x1 / (1.5 * s)) + 1;
-  for (let q = q0; q <= q1; q++) {
-    const r0 = Math.floor(m.y0 / (R3 * s) - q / 2) - 1, r1 = Math.ceil(m.y1 / (R3 * s) - q / 2) + 1;
-    for (let r = r0; r <= r1; r++) {
-      const x = 1.5 * s * q, y = R3 * s * (r + q / 2);
-      if (sh.f(x, y)) cells.set(key(q, r), [q, r]);
-    }
+function ringRadius(sh) {
+  if (sh._R) return sh._R;
+  const [cx, cy] = sh.ring.c, f = sh.ring.f;
+  const R = new Float64Array(RING_A);
+  for (let m = 0; m < RING_A; m++) {
+    const t = 2 * Math.PI * m / RING_A, ct = Math.cos(t), st = Math.sin(t);
+    let r = 0;
+    while (r < 4 && f(cx + (r + 0.004) * ct, cy + (r + 0.004) * st)) r += 0.004;   // はじめて外に出るところ
+    let lo = r, hi = r + 0.004;
+    for (let k = 0; k < 20; k++) { const mid = (lo + hi) / 2; if (f(cx + mid * ct, cy + mid * st)) lo = mid; else hi = mid; }
+    R[m] = lo;
   }
-  // 1つの部屋とだけつながる出っぱりをけずる
-  for (let pass = 0; pass < 4; pass++) {
-    let changed = false;
-    for (const [k, [q, r]] of cells) {
-      let c = 0;
-      for (const [dq, dr] of HEX_D) if (cells.has(key(q + dq, r + dr))) c++;
-      if (c <= 1) { cells.delete(k); changed = true; }
+  // ならす：へこみやとがりを少し丸くして、わの線が急に曲がらないようにする
+  const w = Math.max(3, Math.round((sh.ring.smooth || 2) / 360 * RING_A));
+  let S = R;
+  for (let pass = 0; pass < 2; pass++) {
+    const o = new Float64Array(RING_A);
+    for (let m = 0; m < RING_A; m++) {
+      let a = 0;
+      for (let k = -w; k <= w; k++) a += S[(m + k + RING_A) % RING_A];
+      o[m] = a / (2 * w + 1);
     }
-    if (!changed) break;
+    S = o;
   }
-  // いちばん大きいかたまりだけ残す
-  const comp = new Map(); let best = null, bestSize = 0;
-  for (const k0 of cells.keys()) {
-    if (comp.has(k0)) continue;
-    const list = [k0]; comp.set(k0, k0);
-    for (let h = 0; h < list.length; h++) {
-      const [q, r] = cells.get(list[h]);
-      for (const [dq, dr] of HEX_D) {
-        const k = key(q + dq, r + dr);
-        if (cells.has(k) && !comp.has(k)) { comp.set(k, k0); list.push(k); }
+  sh._R = S;
+  return S;
+}
+// 角度 t（ラジアン）での R
+function ringR(Rt, t) {
+  let u = (t / (2 * Math.PI)) * RING_A;
+  u = ((u % RING_A) + RING_A) % RING_A;
+  const m = Math.floor(u), fr = u - m;
+  return Rt[m] * (1 - fr) + Rt[(m + 1) % RING_A] * fr;
+}
+
+// N 本のわで部屋を作る
+function buildRings(sh, N) {
+  const Rt = ringRadius(sh);
+  const [cx, cy] = sh.ring.c;
+  // まんなか（ゴール）は、わ1.6本ぶんか、全体の14%の大きいほう
+  const r1 = Math.max(RING_C0 / (RING_C0 + N - 1), 0.14);
+  const th = (1 - r1) / (N - 1);                             // わ1本のはば（ρで）
+  const rho = k => k === 0 ? 0 : r1 + (k - 1) * th;         // わ k の内がわ
+  const cells = [{ k: 0, a: 0, b: 2 * Math.PI }];
+  const rings = [[0]];
+  for (let k = 1; k < N; k++) {
+    const pm = (rho(k) + rho(k + 1)) / 2;
+    // わのまん中の線にそって、部屋がだいたい正方形になるように分ける
+    const u = new Float64Array(RING_A + 1);
+    let px = cx + pm * Rt[0], py = cy;
+    for (let m = 1; m <= RING_A; m++) {
+      const t = 2 * Math.PI * m / RING_A;
+      const r = pm * Rt[m % RING_A];
+      const qx = cx + r * Math.cos(t), qy = cy + r * Math.sin(t);
+      const thick = Rt[m % RING_A] * th;
+      u[m] = u[m - 1] + Math.hypot(qx - px, qy - py) / thick;
+      px = qx; py = qy;
+    }
+    const n = Math.max(4, Math.round(u[RING_A]));
+    const step = u[RING_A] / n;
+    const off = ((k * 0.618034) % 1) * step;           // わごとに区切りの位置をずらす
+    const bounds = [];
+    let m = 0;
+    for (let j = 0; j < n; j++) {
+      const target = off + j * step;
+      while (m < RING_A && u[m + 1] < target) m++;
+      const fr = (target - u[m]) / ((u[m + 1] - u[m]) || 1);
+      bounds.push(2 * Math.PI * (m + fr) / RING_A);
+    }
+    const ring = [];
+    for (let j = 0; j < n; j++) {
+      let a = bounds[j], b = j + 1 < n ? bounds[j + 1] : bounds[0] + 2 * Math.PI;
+      ring.push(cells.length);
+      cells.push({ k, a, b });
+    }
+    rings.push(ring);
+  }
+  return { cells, rings, N, th, rho, Rt, cx, cy };
+}
+
+// 2つの角度の区間が重なる長さ（ぐるっと回る分も考える）
+function arcOverlap(a0, a1, b0, b1) {
+  let best = 0, at = 0;
+  for (const sft of [-2 * Math.PI, 0, 2 * Math.PI]) {
+    const lo = Math.max(a0, b0 + sft), hi = Math.min(a1, b1 + sft);
+    if (hi - lo > best) { best = hi - lo; at = (lo + hi) / 2; }
+  }
+  return [best, at];
+}
+
+function makeRingGraph(sh, area) {
+  // 部屋の数がだいたい area になる N をさがす
+  // 部屋の数はだいたい N² に比例するので、N=10 で数えてから見当をつける
+  const n10 = buildRings(sh, 10).cells.length;
+  let N = Math.max(4, Math.round(10 * Math.sqrt(area / n10)));
+  let geo = buildRings(sh, N);
+  // area にいちばん近い N にする
+  for (let k = 0; k < 3; k++) {
+    const alt = geo.cells.length < area ? N + 1 : N - 1;
+    if (alt < 4) break;
+    const g2 = buildRings(sh, alt);
+    if (Math.abs(g2.cells.length - area) < Math.abs(geo.cells.length - area)) { N = alt; geo = g2; } else break;
+  }
+  const { cells, rings, th, rho, Rt, cx, cy } = geo;
+  const n = cells.length;
+  let meanR = 0; for (let m = 0; m < RING_A; m++) meanR += Rt[m]; meanR /= RING_A;
+  const unit = meanR * th;
+  const x = new Float64Array(n), y = new Float64Array(n), px = new Float64Array(n), py = new Float64Array(n);
+  const tm = new Float64Array(n), pm = new Float64Array(n);
+  const nbr = Array.from({ length: n }, () => []);
+  const link = new Map();   // "i,j" → 内と外のわをつなぐ角度（こたえの線用）
+  cells.forEach((c, i) => {
+    const t = (c.a + c.b) / 2;
+    const p = c.k === 0 ? 0 : (rho(c.k) + rho(c.k + 1)) / 2;
+    const r = p * ringR(Rt, t);
+    tm[i] = t; pm[i] = p;
+    px[i] = cx + r * Math.cos(t); py[i] = cy + r * Math.sin(t);
+    x[i] = px[i] / unit; y[i] = py[i] / unit;
+  });
+  const add = (i, j, ang) => {
+    nbr[i].push(j); nbr[j].push(i);
+    if (ang !== undefined) { link.set(i + ',' + j, ang); link.set(j + ',' + i, ang); }
+  };
+  for (let k = 1; k < geo.N; k++) {
+    const r = rings[k], len = r.length;
+    for (let j = 0; j < len; j++) add(r[j], r[(j + 1) % len]);
+    for (const i of r) {
+      const c = cells[i];
+      if (k === 1) { add(i, 0, (c.a + c.b) / 2); continue; }
+      for (const p of rings[k - 1]) {
+        const d = cells[p];
+        const [ov, at] = arcOverlap(c.a, c.b, d.a, d.b);
+        // 重なりが小さすぎるところは通路にしない（細すぎて通れないため）
+        if (ov > 0.35 * Math.min(c.b - c.a, d.b - d.a)) add(i, p, at);
       }
     }
-    if (list.length > bestSize) { bestSize = list.length; best = k0; }
   }
-  const keys = [...cells.keys()].filter(k => comp.get(k) === best);
-  const idx = new Map(); keys.forEach((k, i) => idx.set(k, i));
-  const n = keys.length;
-  const x = new Float64Array(n), y = new Float64Array(n), cx = new Float64Array(n), cy = new Float64Array(n);
-  const qa = new Int32Array(n), ra = new Int32Array(n);
-  const nbr = [], dirNbr = [];
-  keys.forEach((k, i) => {
-    const [q, r] = cells.get(k);
-    qa[i] = q; ra[i] = r;
-    cx[i] = 1.5 * s * q; cy[i] = R3 * s * (r + q / 2);
-    x[i] = cx[i] / (R3 * s); y[i] = cy[i] / (R3 * s);   // 部屋どうしの間かくを1とする
-    const dn = new Int32Array(6).fill(-1), a = [];
-    HEX_D.forEach(([dq, dr], d) => {
-      const j = idx.get(key(q + dq, r + dr));
-      if (j !== undefined) { dn[d] = j; a.push(j); }
-    });
-    nbr.push(a); dirNbr.push(dn);
-  });
-  const at = (q, r) => { const j = idx.get(key(q, r)); return j === undefined ? -1 : j; };
-  return { n, x, y, nbr, dirNbr, cx, cy, q: qa, r: ra, s, at, kind: 'hex' };
+  return { n, x, y, nbr, kind: 'ring', geo, px, py, tm, pm, link, unit };
 }
 
-// 向き d に、形の外が2部屋ぶん続くか（矢印をかける場所があるか）
-function hexClear(g, i, d) {
-  const [dq, dr] = HEX_D[d];
-  for (let k = 1; k <= 2; k++) if (g.at(g.q[i] + dq * k, g.r[i] + dr * k) >= 0) return false;
-  return true;
-}
-
-function pickEndsHex(g, sh) {
-  let mx = 0, my = 0;
-  for (let i = 0; i < g.n; i++) { mx += g.cx[i]; my += g.cy[i]; }
-  mx /= g.n; my /= g.n;
-  function bestDir(i) {
-    let best = -1, bv = -Infinity;
-    for (let d = 0; d < 6; d++) {
-      if (!hexClear(g, i, d)) continue;
-      const a = HEX_ANG(d);
-      const ox = g.cx[i] - mx, oy = g.cy[i] - my, ol = Math.hypot(ox, oy) || 1;
-      // 外向きの向きを選ぶ。同じくらいなら上下の向きを好む（矢印がまっすぐになる）
-      const v = (Math.cos(a) * ox + Math.sin(a) * oy) / ol + (d === 1 || d === 4 ? 0.3 : 0);
-      if (v > bv) { bv = v; best = d; }
-    }
-    return best;
+function pickEndsRing(g, sh) {
+  const out = g.geo.rings[g.geo.N - 1];
+  let s = out[0], bd = Infinity;
+  for (const i of out) {
+    const d = (g.px[i] - sh.ring.s[0]) ** 2 + (g.py[i] - sh.ring.s[1]) ** 2;
+    if (d < bd) { bd = d; s = i; }
   }
-  const cand = [];
-  for (let i = 0; i < g.n; i++) if (bestDir(i) >= 0) cand.push(i);
-  function nearest(px, py, avoid) {
-    let best = cand[0], bd = Infinity;
-    for (const i of cand) {
-      if (i === avoid) continue;
-      const d = (g.cx[i] - px) ** 2 + (g.cy[i] - py) ** 2;
-      if (d < bd) { bd = d; best = i; }
-    }
-    return best;
-  }
-  const s = nearest(sh.s[0], sh.s[1], -1);
-  const t = nearest(sh.t[0], sh.t[1], s);
-  return { s, t, sDir: bestDir(s), tDir: bestDir(t) };
+  return { s, t: 0 };
 }
 
 
@@ -845,8 +902,8 @@ const LEVELS = [
 ];
 
 let shapeSel = 'heart';
-let modeSel = 'kaku';     // 'kaku' カクカク / 'kune' くねくね
-const KUNE_MAX_LV = 3;     // くねくねは「むずい」まで（げきむずは線が細かくなりすぎる）
+let modeSel = 'kaku';     // 'kaku' カクカク / 'guru' ぐるぐる
+const GURU_MAX_LV = 2;     // ぐるぐるは「ちょいむず」まで（それより上は線がこみあって読みにくい）
 let levelSel = 1;
 let showAnswer = false;
 let current = null;
@@ -893,7 +950,8 @@ function buildUI() {
 
   document.querySelectorAll('.mode-btn').forEach(b => b.addEventListener('click', () => {
     modeSel = b.dataset.mode; store('mode', modeSel);
-    if (modeSel === 'kune' && levelSel > KUNE_MAX_LV) { levelSel = KUNE_MAX_LV; store('level', levelSel); }
+    if (modeSel === 'guru' && levelSel > GURU_MAX_LV) { levelSel = GURU_MAX_LV; store('level', levelSel); }
+    if (modeSel === 'guru' && !SH.find(x => x.id === shapeSel).ring) { shapeSel = 'heart'; store('shape', shapeSel); }
     syncUI(); regenerate();
   }));
 
@@ -907,10 +965,13 @@ function buildUI() {
   });
 }
 function syncUI() {
-  document.querySelectorAll('.shape-btn').forEach(b => b.classList.toggle('active', b.dataset.id === shapeSel));
+  document.querySelectorAll('.shape-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.id === shapeSel);
+    b.hidden = modeSel === 'guru' && !SH.find(x => x.id === b.dataset.id).ring;
+  });
   document.querySelectorAll('.level-btn[data-lv]').forEach(b => {
     b.classList.toggle('active', +b.dataset.lv === levelSel);
-    b.hidden = modeSel === 'kune' && +b.dataset.lv > KUNE_MAX_LV;
+    b.hidden = modeSel === 'guru' && +b.dataset.lv > GURU_MAX_LV;
   });
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === modeSel));
 }
@@ -923,13 +984,13 @@ function toast(msg) {
 }
 
 // ============================================================
-// 番号：かたちのコード＋（くねくねは K）＋むずかしさ（1〜5）＋4けた。例 HA3-0482 / HAK3-0482
+// 番号：かたちのコード＋（ぐるぐるは G）＋むずかしさ（1〜5）＋4けた。例 HA3-0482 / HAG3-0482
 // ============================================================
 function mazeIdString(sh, lv, seed, mode) {
-  return sh.code + (mode === 'kune' ? 'K' : '') + (lv + 1) + '-' + String(seed).padStart(4, '0');
+  return sh.code + (mode === 'guru' ? 'G' : '') + (lv + 1) + '-' + String(seed).padStart(4, '0');
 }
 function seedFor(sh, lv, seed, mode) {
-  let h = Math.imul(seed + 1, 2654435761) ^ Math.imul(sh.code.charCodeAt(0) * 31 + sh.code.charCodeAt(1) + lv * 977 + (mode === 'kune' ? 50021 : 0), 40503);
+  let h = Math.imul(seed + 1, 2654435761) ^ Math.imul(sh.code.charCodeAt(0) * 31 + sh.code.charCodeAt(1) + lv * 977 + (mode === 'guru' ? 50021 : 0), 40503);
   h = Math.imul(h ^ (h >>> 15), 2246822519);
   h = Math.imul(h ^ (h >>> 13), 3266489917);
   return (h ^ (h >>> 16)) >>> 0;
@@ -939,9 +1000,9 @@ function seedFor(sh, lv, seed, mode) {
 const gridCache = {};
 function getGrid(sh, lv, mode) {
   const key = sh.id + lv + mode;
-  if (!gridCache[key] && mode === 'kune') {
-    const g = makeHexGraph(sh, LEVELS[lv].area);
-    gridCache[key] = { g, ends: pickEndsHex(g, sh) };
+  if (!gridCache[key] && mode === 'guru') {
+    const g = makeRingGraph(sh, LEVELS[lv].area);
+    gridCache[key] = { g, ends: pickEndsRing(g, sh) };
   }
   if (!gridCache[key]) {
     const { mask, cols, rows, toGrid } = rasterize(sh, LEVELS[lv].area);
@@ -1006,7 +1067,7 @@ function showResult() {
   document.getElementById('printTitle').textContent = sh.name + 'の めいろ';
   const m = ev.effort / BASE_EFFORT;
   infoEl.innerHTML =
-    `${R('番号', 'ばんごう')}：<b>${id}</b>（${sh.name}・${mode === 'kune' ? 'くねくね' : 'カクカク'}・${LEVELS[lv].name}）<br>` +
+    `${R('番号', 'ばんごう')}：<b>${id}</b>（${sh.name}・${mode === 'guru' ? 'ぐるぐる' : 'カクカク'}・${LEVELS[lv].name}）<br>` +
     `むずかしさ：ムズめいろの「ちょいむず」の <b>${R('約', 'やく')}${m.toFixed(1)}${R('倍', 'ばい')}</b><br>` +
     `${R('正解', 'せいかい')}の${R('道', 'みち')} ${ev.pathLen}マス・${R('部屋', 'へや')} ${current.g.n}マス`;
 }
@@ -1088,7 +1149,7 @@ function renderMaze(c, cell, answer) {
 
 function drawMaze() {
   if (!current) return;
-  if (current.mode === 'kune') { drawHexMaze(); fitCanvas(); return; }
+  if (current.mode === 'guru') { drawRingMaze(); fitCanvas(); return; }
   const g = current.g;
   const cell = cellSizeFor(g);
   const W = g.cols * cell, H = g.rows * cell;
@@ -1099,73 +1160,28 @@ function drawMaze() {
 }
 
 // ============================================================
-// くねくね迷路をかく
-//  かべは六角形の辺をつないだ線。それを「辺のまん中を通り、角をなめらかに曲がる」
-//  曲線（2次ベジェ）でかくので、通路のはばはほぼ同じまま、くねくねになる
+// ぐるぐる迷路をかく
+//  わの線は「輪郭までのきょり」を同じ割合でちぢめた線なので、輪郭と同じかたちになる
 // ============================================================
-function hash01(a, b) {
-  let h = Math.imul(a ^ 0x9e3779b9, 2654435761) ^ Math.imul(b + 0x7f4a7c15, 1597334677);
-  h = Math.imul(h ^ (h >>> 15), 2246822519);
-  h = Math.imul(h ^ (h >>> 13), 3266489917);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
+function drawRingMaze() {
+  const { g, ends, open, path, sh } = current;
+  const G = g.geo, Rt = G.Rt, N = G.N;
+  const PT = (t, p) => { const r = p * ringR(Rt, t); return [G.cx + r * Math.cos(t), G.cy + r * Math.sin(t)]; };
+  const deco = sh.ring.deco || [];
 
-// 点の列 pts を、なめらかな曲線として path に足す（closed なら輪）
-function smoothPath(path, pts, closed) {
-  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-  const n = pts.length;
-  if (closed) {
-    const m0 = mid(pts[n - 1], pts[0]);
-    path.moveTo(m0[0], m0[1]);
-    for (let i = 0; i < n; i++) {
-      const m = mid(pts[i], pts[(i + 1) % n]);
-      path.quadraticCurveTo(pts[i][0], pts[i][1], m[0], m[1]);
-    }
-    path.closePath();
-    return;
-  }
-  path.moveTo(pts[0][0], pts[0][1]);
-  if (n === 2) { path.lineTo(pts[1][0], pts[1][1]); return; }
-  let m = mid(pts[0], pts[1]);
-  path.lineTo(m[0], m[1]);
-  for (let i = 1; i < n - 1; i++) {
-    m = mid(pts[i], pts[i + 1]);
-    path.quadraticCurveTo(pts[i][0], pts[i][1], m[0], m[1]);
-  }
-  path.lineTo(pts[n - 1][0], pts[n - 1][1]);
-}
-
-// 角をけずって、なめらかにする（外がわの線のギザギザを小さくする）
-function chaikin(pts, closed, times) {
-  for (let t = 0; t < times; t++) {
-    const out = [];
-    const n = pts.length;
-    if (!closed) out.push(pts[0]);
-    const last = closed ? n : n - 1;
-    for (let i = 0; i < last; i++) {
-      const a = pts[i], b = pts[(i + 1) % n];
-      out.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25]);
-      out.push([a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]);
-    }
-    if (!closed) out.push(pts[n - 1]);
-    pts = out;
-  }
-  return pts;
-}
-
-function drawHexMaze() {
-  const { g, ends, open, path, seed } = current;
-  const s = g.s, R3 = Math.sqrt(3);
+  // 大きさ：輪郭とかざり＋矢印の余白
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (let i = 0; i < g.n; i++) {
-    x0 = Math.min(x0, g.cx[i] - s); x1 = Math.max(x1, g.cx[i] + s);
-    y0 = Math.min(y0, g.cy[i] - s); y1 = Math.max(y1, g.cy[i] + s);
+  const grow = (x, y) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); };
+  for (let m = 0; m < 360; m++) { const [x, y] = PT(2 * Math.PI * m / 360, 1); grow(x, y); }
+  for (const d of deco) {
+    if (d.t === 'rect') { grow(d.x0, d.y0); grow(d.x1, d.y1); }
+    if (d.t === 'ell') { const r = Math.max(d.rx, d.ry); grow(d.cx - r, d.cy - r); grow(d.cx + r, d.cy + r); }
+    if (d.t === 'poly') for (const [x, y] of d.p) grow(x, y);
   }
-  const marg = 2.4 * R3 * s;                 // 矢印をかく余白
+  const marg = 2.6 * g.unit;
   x0 -= marg; y0 -= marg; x1 += marg; y1 += marg;
-  // U：部屋どうしの間かく（px）
-  const U = Math.max(8, Math.min(40, 780 / (Math.max(x1 - x0, y1 - y0) / (R3 * s))));
-  const k = U / (R3 * s);
+  const U = Math.max(8, Math.min(40, 780 / (Math.max(x1 - x0, y1 - y0) / g.unit)));   // わ1本のはば（px）
+  const k = U / g.unit;
   const W = Math.ceil((x1 - x0) * k), H = Math.ceil((y1 - y0) * k);
   canvas.width = W * SCALE; canvas.height = H * SCALE;
   const c = ctx;
@@ -1173,98 +1189,122 @@ function drawHexMaze() {
   c.fillStyle = '#fff';
   c.fillRect(0, 0, W, H);
   const P = (x, y) => [(x - x0) * k, (y - y0) * k];
+  const Q = (t, p) => { const [x, y] = PT(t, p); return P(x, y); };
+  const wall = Math.max(2, U * 0.2);
 
-  // 頂点：同じ場所は同じ番号にする。少しだけゆらして手がきっぽくする
-  const verts = new Map();
-  const jit = 0.13 * s;
-  function vert(i, cornerK) {
-    const a = cornerK * Math.PI / 3;
-    const vx = g.cx[i] + s * Math.cos(a), vy = g.cy[i] + s * Math.sin(a);
-    const kx = Math.round(vx / s * 1000), ky = Math.round(vy / s * 1000);
-    const key = kx + ',' + ky;
-    let v = verts.get(key);
-    if (!v) {
-      const h1 = hash01(kx * 7 + seed, ky), h2 = hash01(ky * 13 + seed, kx);
-      v = { key, p: P(vx + (h1 - 0.5) * 2 * jit, vy + (h2 - 0.5) * 2 * jit), e: [] };
-      verts.set(key, v);
-    }
-    return v;
-  }
-  // かべの辺を集める（type 0 内がわ / 1 外がわ）
-  const edges = [];
-  for (let i = 0; i < g.n; i++) {
-    for (let d = 0; d < 6; d++) {
-      const j = g.dirNbr[i][d];
-      let type = -1;
-      if (j < 0) {
-        if ((i === ends.s && d === ends.sDir) || (i === ends.t && d === ends.tDir)) continue;
-        type = 1;
-      } else if (i < j && open[i].indexOf(j) < 0) type = 0;
-      if (type < 0) continue;
-      const a = vert(i, d), b = vert(i, (d + 1) % 6);
-      const e = { a, b, type, used: false };
-      edges.push(e); a.e.push(e); b.e.push(e);
+  // わにそった線を path に足す（角度 a から b まで、ρ = p）
+  function arcTo(path, p, a, b, move) {
+    const steps = Math.max(2, Math.ceil(Math.abs(b - a) / (2 * Math.PI) * 720));
+    for (let s = 0; s <= steps; s++) {
+      const [x, y] = Q(a + (b - a) * s / steps, p);
+      if (s === 0 && move) path.moveTo(x, y); else path.lineTo(x, y);
     }
   }
-  // 辺をつないで線（chain）にする。分かれ目・はし・種類がかわるところで区切る
-  const isNode = v => v.e.length !== 2 || v.e[0].type !== v.e[1].type;
-  const paths = [new Path2D(), new Path2D()];
-  function walk(startV, e) {
-    const pts = [startV.p];
-    let v = startV;
-    while (true) {
-      e.used = true;
-      v = e.a === v ? e.b : e.a;
-      pts.push(v.p);
-      if (isNode(v) || v === startV) break;
-      const next = v.e[0] === e ? v.e[1] : v.e[0];
-      if (next.used) break;
-      e = next;
-    }
-    return pts;
-  }
-  for (const v of verts.values()) {
-    if (!isNode(v)) continue;
-    for (const e of v.e) if (e.used) continue; else {
-      const pts = walk(v, e);
-      smoothPath(paths[e.type], e.type === 1 ? chaikin(pts, false, 2) : pts, false);
-    }
-  }
-  for (const e of edges) {
-    if (e.used) continue;
-    const pts = walk(e.a, e);
-    pts.pop();
-    smoothPath(paths[e.type], e.type === 1 ? chaikin(pts, true, 2) : pts, true);
-  }
+  const outline = new Path2D();
+  arcTo(outline, 1, 0, 2 * Math.PI, true); outline.closePath();
 
-  const wall = Math.max(2, U * 0.17);
-  const cxOf = i => (g.cx[i] - x0) * k, cyOf = i => (g.cy[i] - y0) * k;
-  const dv = d => [Math.cos(HEX_ANG(d)), Math.sin(HEX_ANG(d))];
+  // かざり（リンゴの軸や葉など）：白くぬって外がわの線と同じふとさでふちどる
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  for (const d of deco) {
+    const dp = new Path2D();
+    if (d.t === 'rect') { const [a, b] = P(d.x0, d.y0), [e, f] = P(d.x1, d.y1); dp.rect(a, b, e - a, f - b); }
+    if (d.t === 'ell') { const [a, b] = P(d.cx, d.cy); dp.ellipse(a, b, d.rx * k, d.ry * k, d.a || 0, 0, 2 * Math.PI); }
+    if (d.t === 'poly') d.p.forEach(([x, y], i) => { const [a, b] = P(x, y); if (i) dp.lineTo(a, b); else dp.moveTo(a, b); });
+    dp.closePath();
+    c.fillStyle = '#fff'; c.fill(dp);
+    c.strokeStyle = '#000'; c.lineWidth = wall * 1.7; c.stroke(dp);
+  }
+  c.fillStyle = '#fff'; c.fill(outline);
 
+  // まんなか（ゴール）をうすいグレーに
+  const center = new Path2D();
+  arcTo(center, G.rho(1), 0, 2 * Math.PI, true); center.closePath();
+  c.fillStyle = '#e2e2e2'; c.fill(center);
+
+  // こたえ：わにそって進み、となりのわへはまっすぐうつる
   if (showAnswer && path) {
-    const sd = dv(ends.sDir), td = dv(ends.tDir);
-    const pts = [[cxOf(ends.s) + sd[0] * U * 0.9, cyOf(ends.s) + sd[1] * U * 0.9]];
-    for (const v of path) pts.push([cxOf(v), cyOf(v)]);
-    pts.push([cxOf(ends.t) + td[0] * U * 0.9, cyOf(ends.t) + td[1] * U * 0.9]);
     const ap = new Path2D();
-    smoothPath(ap, pts, false);
+    const short = (from, to) => { let d = to - from; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return from + d; };
+    const s = ends.s;
+    let ct = g.tm[s], cp = 1 + 0.9 * G.th;
+    const [sx, sy] = Q(ct, cp); ap.moveTo(sx, sy);
+    cp = g.pm[s];
+    { const [x, y] = Q(ct, cp); ap.lineTo(x, y); }
+    for (let q = 1; q < path.length; q++) {
+      const u = path[q - 1], v = path[q];
+      if (v === 0) {
+        const ang = short(ct, g.link.get(u + ',' + v));
+        arcTo(ap, cp, ct, ang, false);
+        const [x, y] = P(G.cx, G.cy); ap.lineTo(x, y);
+        break;
+      }
+      if (G.cells[u].k === G.cells[v].k) {
+        const to = short(ct, g.tm[v]); arcTo(ap, cp, ct, to, false); ct = to;
+      } else {
+        const ang = short(ct, g.link.get(u + ',' + v));
+        arcTo(ap, cp, ct, ang, false); ct = ang;
+        cp = g.pm[v]; const [x, y] = Q(ct, cp); ap.lineTo(x, y);
+        const to = short(ct, g.tm[v]); arcTo(ap, cp, ct, to, false); ct = to;
+      }
+    }
     c.strokeStyle = '#9a9a9a';
     c.lineWidth = Math.max(3, U * 0.42);
-    c.lineCap = 'round'; c.lineJoin = 'round';
     c.stroke(ap);
   }
 
+  // かべ
+  const inner = new Path2D(), outer = new Path2D();
+  const isOpen = (i, j) => open[i].indexOf(j) >= 0;
+  for (let kk = 1; kk < N; kk++) {
+    const ring = G.rings[kk];
+    for (let q = 0; q < ring.length; q++) {
+      const i = ring[q], cl = G.cells[i];
+      // 内がわのわの線
+      if (kk === 1) {
+        if (!isOpen(i, 0)) arcTo(inner, G.rho(1), cl.a, cl.b, true);
+      } else {
+        for (const p of G.rings[kk - 1]) {
+          if (isOpen(i, p)) continue;
+          const d = G.cells[p];
+          for (const sft of [-2 * Math.PI, 0, 2 * Math.PI]) {
+            const lo = Math.max(cl.a, d.a + sft), hi = Math.min(cl.b, d.b + sft);
+            if (hi > lo + 1e-9) arcTo(inner, G.rho(kk), lo, hi, true);
+          }
+        }
+      }
+      // となりの部屋とのしきり
+      const nx = ring[(q + 1) % ring.length];
+      if (!isOpen(i, nx)) {
+        const [a, b] = Q(cl.b, G.rho(kk)), [e, f] = Q(cl.b, G.rho(kk + 1));
+        inner.moveTo(a, b); inner.lineTo(e, f);
+      }
+      // いちばん外のわ：外がわの線（スタートのところはあける）
+      if (kk === N - 1 && i !== ends.s) arcTo(outer, 1, cl.a, cl.b, true);
+    }
+  }
   c.strokeStyle = '#000';
   c.lineCap = 'round'; c.lineJoin = 'round';
-  c.lineWidth = wall; c.stroke(paths[0]);
-  c.lineWidth = wall * 1.7; c.stroke(paths[1]);
+  c.lineWidth = wall; c.stroke(inner);
+  c.lineWidth = wall * 1.7; c.stroke(outer);
 
+  // ゴールの文字
+  let rmin = Infinity; for (let m = 0; m < RING_A; m += 8) rmin = Math.min(rmin, Rt[m]);
+  const cr = G.rho(1) * rmin * k;
+  const fs = Math.max(9, Math.min(cr * 0.62, 26));
+  const [gx, gy] = P(G.cx, G.cy);
+  c.fillStyle = '#000';
+  c.font = `700 ${fs}px "BIZ UDPGothic", sans-serif`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('ゴール', gx, gy);
+
+  // スタートの矢印（外から中へ）
   const size = Math.max(20, Math.min(U * 2.2, 48));
-  const off = U * 0.5 + size * 0.5 + wall * 1.5;
-  const sd = dv(ends.sDir), td = dv(ends.tDir);
-  drawArrow(c, cxOf(ends.s) + sd[0] * off, cyOf(ends.s) + sd[1] * off, size, HEX_ANG(ends.sDir) + Math.PI / 2);
-  drawArrow(c, cxOf(ends.t) + td[0] * off, cyOf(ends.t) + td[1] * off, size, HEX_ANG(ends.tDir) - Math.PI / 2);
+  const ts = g.tm[ends.s];
+  const [bx, by] = Q(ts, 1);
+  const off = size * 0.5 + wall * 2;
+  drawArrow(c, bx + Math.cos(ts) * off, by + Math.sin(ts) * off, size, ts + Math.PI / 2);
 }
+
 function fitCanvas() {
   if (!current) return;
   const stage = document.getElementById('stage');
@@ -1281,10 +1321,10 @@ function recallById() {
   const raw = document.getElementById('idInput').value.trim().toUpperCase()
     .replace(/[Ａ-Ｚ０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
     .replace(/[－ー‐―−]/g, '-');
-  const m = raw.match(/^([A-Z]{2})(K?)([1-5])-?(\d{1,4})$/);
+  const m = raw.match(/^([A-Z]{2})(G?)([1-5])-?(\d{1,4})$/);
   const sh = m && SH.find(s => s.code === m[1]);
-  const mode = m && m[2] ? 'kune' : 'kaku';
-  if (!sh || (mode === 'kune' && +m[3] - 1 > KUNE_MAX_LV)) {
+  const mode = m && m[2] ? 'guru' : 'kaku';
+  if (!sh || (mode === 'guru' && (+m[3] - 1 > GURU_MAX_LV || !sh.ring))) {
     infoEl.innerHTML = `${R('番号', 'ばんごう')}が みつからないよ（れい：HA3-0482）`;
     return;
   }
@@ -1330,9 +1370,10 @@ window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer
 
 (function init() {
   const s = load('shape'); if (s && SH.some(x => x.id === s)) shapeSel = s;
-  const md = load('mode'); if (md === 'kune' || md === 'kaku') modeSel = md;
+  const md = load('mode'); if (md === 'guru' || md === 'kaku') modeSel = md;
   const l = parseInt(load('level'), 10); if (l >= 0 && l < LEVELS.length) levelSel = l;
-  if (modeSel === 'kune' && levelSel > KUNE_MAX_LV) levelSel = KUNE_MAX_LV;
+  if (modeSel === 'guru' && levelSel > GURU_MAX_LV) levelSel = GURU_MAX_LV;
+  if (modeSel === 'guru' && !SH.find(x => x.id === shapeSel).ring) shapeSel = 'heart';
   buildUI();
   syncUI();
   regenerate();
