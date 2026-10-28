@@ -41,7 +41,7 @@
   .app {
     height: 100%;
     display: grid;
-    grid-template-columns: 380px 1fr;
+    grid-template-columns: 392px 1fr;
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
   }
@@ -59,29 +59,32 @@
   .group { display: flex; flex-direction: column; gap: 6px; }
   .label { font-size: 0.85rem; font-weight: 700; color: var(--sub); letter-spacing: 0.05em; }
 
-  .shapes {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-  }
+  .shapes { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+  .season { display: flex; flex-direction: column; gap: 4px; flex: 0 1 auto; }
+  .season.all { flex-basis: 100%; }
+  .season-name { font-size: 0.78rem; font-weight: 700; color: var(--accent-dark); }
+  .season-grid { display: flex; flex-wrap: wrap; gap: 5px; }
   .shape-btn {
     background: var(--panel);
     border: 2px solid var(--line);
     border-radius: 10px;
     padding: 5px 2px 4px;
-    min-height: 64px;
+    min-height: 58px;
+    width: 66px;
+    white-space: nowrap;
+    letter-spacing: -0.02em;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 2px;
     color: var(--ink);
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 700;
     cursor: pointer;
   }
-  .shape-btn canvas { width: 40px; height: 40px; display: block; }
+  .shape-btn canvas { width: 34px; height: 34px; display: block; }
   .shape-btn.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-dark); }
-  .shape-btn .omakase { width: 40px; height: 40px; display: grid; place-items: center; font-size: 1.6rem; color: var(--accent); font-weight: 700; }
+  .shape-btn .omakase { width: 34px; height: 34px; display: grid; place-items: center; font-size: 1.6rem; color: var(--accent); font-weight: 700; }
 
   .levels { display: grid; grid-template-columns: repeat(5, 1fr); border: 2px solid var(--accent); border-radius: 10px; overflow: hidden; }
   .level-btn {
@@ -133,12 +136,10 @@
   @media (max-aspect-ratio: 1/1), (max-width: 760px) {
     .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
     .panel { border-right: none; border-bottom: 1px solid var(--line); max-height: 48vh; padding: 12px 16px; gap: 10px; }
-    .shapes { grid-template-columns: repeat(7, 1fr); }
     .actions { grid-template-columns: repeat(3, 1fr); }
     .btn.main { grid-column: auto; font-size: 1rem; }
   }
   @media (max-width: 560px) {
-    .shapes { grid-template-columns: repeat(5, 1fr); }
     .actions { grid-template-columns: 1fr 1fr; }
     .btn.main { grid-column: 1 / -1; }
   }
@@ -268,51 +269,109 @@ const SH = (() => {
   const star = starPts(0, 0.08, 1.0, 0.52, 5);
 
   return [
-    { id: 'heart', s: [-0.55, -1.0], t: [0, 1.3], code: 'HA', name: 'ハート', box: [-1.5, -1.5, 1.5, 1.5],
+    { id: 'heart', cat: 'いつも', s: [-0.55, -1.0], t: [0, 1.3], code: 'HA', name: 'ハート', box: [-1.5, -1.5, 1.5, 1.5],
       f: (x, y) => { const X = x / 1.05, Y = -(y * 1.05) + 0.1; const a = X * X + Y * Y - 1; return a * a * a - X * X * Y * Y * Y <= 0; } },
-    { id: 'apple', s: [0, -1.1], t: [0, 1.2], code: 'AP', name: 'リンゴ', box: [-1.4, -1.4, 1.4, 1.4],
+    { id: 'apple', cat: 'いつも', s: [0, -1.1], t: [0, 1.2], code: 'AP', name: 'リンゴ', box: [-1.4, -1.4, 1.4, 1.4],
       f: (x, y) => (C(x, y, -0.36, 0.12, 0.72) || C(x, y, 0.36, 0.12, 0.72) || E(x, y, 0, 0.42, 0.85, 0.62))
         && !C(x, y, 0, -0.72, 0.2)
         || R(x, y, -0.11, -1.0, 0.11, -0.5)
         || E(x, y, 0.38, -0.86, 0.36, 0.17, -0.5) },
-    { id: 'onigiri', s: [0, -1.2], t: [1.1, 1.0], code: 'ON', name: 'おにぎり', box: [-1.5, -1.5, 1.5, 1.3],
-      f: (x, y) => P(x, y, [[0, -0.75], [0.82, 0.62], [-0.82, 0.62]], 0.36) },
-    { id: 'fish', s: [-1.4, 0], t: [1.5, 0.8], code: 'FI', name: 'さかな', box: [-1.6, -1.2, 1.8, 1.2],
+    { id: 'fish', cat: 'いつも', s: [-1.4, 0], t: [1.5, 0.8], code: 'FI', name: 'さかな', box: [-1.6, -1.2, 1.8, 1.2],
       f: (x, y) => E(x, y, -0.25, 0, 1.05, 0.62)
         || P(x, y, [[0.55, 0], [1.45, -0.72], [1.2, 0], [1.45, 0.72]], 0.08)
         || E(x, y, -0.05, -0.62, 0.45, 0.2, 0.15) },
-    { id: 'snowman', s: [0, -1.4], t: [0, 1.3], code: 'SN', name: 'ゆきだるま', box: [-1.2, -1.6, 1.2, 1.4],
+    { id: 'snowman', cat: 'ふゆ', s: [0, -1.4], t: [0, 1.3], code: 'SN', name: 'ゆきだるま', box: [-1.2, -1.6, 1.2, 1.4],
       f: (x, y) => C(x, y, 0, -0.42, 0.46) || C(x, y, 0, 0.5, 0.66)
         || R(x, y, -0.3, -1.25, 0.3, -0.78) || R(x, y, -0.45, -0.9, 0.45, -0.78) },
-    { id: 'house', s: [0.52, -1.1], t: [0, 1.0], code: 'HO', name: 'いえ', box: [-1.3, -1.3, 1.3, 1.2],
+    { id: 'house', cat: 'いつも', s: [0.52, -1.1], t: [0, 1.0], code: 'HO', name: 'いえ', box: [-1.3, -1.3, 1.3, 1.2],
       f: (x, y) => P(x, y, [[-1.05, -0.08], [0, -1.0], [1.05, -0.08]], 0)
         || R(x, y, -0.78, -0.12, 0.78, 0.92)
         || R(x, y, 0.38, -1.0, 0.66, -0.4) },
-    { id: 'rocket', s: [0, -1.5], t: [0, 1.2], code: 'RO', name: 'ロケット', box: [-1.2, -1.6, 1.2, 1.4],
+    { id: 'rocket', cat: 'いつも', s: [0, -1.5], t: [0, 1.2], code: 'RO', name: 'ロケット', box: [-1.2, -1.6, 1.2, 1.4],
       f: (x, y) => R(x, y, -0.42, -0.55, 0.42, 0.85)
         || (E(x, y, 0, -0.55, 0.42, 0.85) && y <= -0.55)
         || P(x, y, [[-0.42, 0.15], [-0.92, 0.75], [-0.92, 1.05], [-0.42, 0.85]], 0)
         || P(x, y, [[0.42, 0.15], [0.92, 0.75], [0.92, 1.05], [0.42, 0.85]], 0)
         || R(x, y, -0.27, 0.85, 0.27, 1.12) },
-    { id: 'car', s: [-1.6, 0.2], t: [1.6, 0.3], code: 'CA', name: 'くるま', box: [-1.8, -1.2, 1.8, 1.2],
+    { id: 'car', cat: 'いつも', s: [-1.6, 0.2], t: [1.6, 0.3], code: 'CA', name: 'くるま', box: [-1.8, -1.2, 1.8, 1.2],
       f: (x, y) => RR(x, y, -1.45, -0.12, 1.45, 0.62, 0.22)
         || P(x, y, [[-0.85, -0.08], [-0.5, -0.72], [0.55, -0.72], [0.95, -0.08]], 0.08)
         || C(x, y, -0.82, 0.62, 0.36) || C(x, y, 0.82, 0.62, 0.36) },
-    { id: 'cat', s: [-0.8, -1.1], t: [0.8, -1.1], code: 'NE', name: 'ネコ', box: [-1.4, -1.4, 1.4, 1.2],
+    { id: 'cat', cat: 'いつも', s: [-0.8, -1.1], t: [0.8, -1.1], code: 'NE', name: 'ネコ', box: [-1.4, -1.4, 1.4, 1.2],
       f: (x, y) => E(x, y, 0, 0.18, 1.02, 0.78)
         || P(x, y, [[-1.0, -0.15], [-0.78, -1.05], [-0.18, -0.52]], 0.06)
         || P(x, y, [[1.0, -0.15], [0.78, -1.05], [0.18, -0.52]], 0.06) },
-    { id: 'rabbit', s: [-0.45, -1.3], t: [0.45, -1.3], code: 'US', name: 'ウサギ', box: [-1.2, -1.6, 1.2, 1.4],
+    { id: 'rabbit', cat: 'いつも', s: [-0.45, -1.3], t: [0.45, -1.3], code: 'US', name: 'ウサギ', box: [-1.2, -1.6, 1.2, 1.4],
       f: (x, y) => E(x, y, 0, 0.52, 0.8, 0.62)
         || E(x, y, -0.36, -0.5, 0.25, 0.68, -0.12)
         || E(x, y, 0.36, -0.5, 0.25, 0.68, 0.12) },
-    { id: 'train', s: [-1.7, -0.1], t: [1.7, 0], code: 'TR', name: 'でんしゃ', box: [-1.9, -1.2, 1.9, 1.2],
-      f: (x, y) => RR(x, y, -1.55, -0.62, 1.55, 0.52, 0.3)
-        || C(x, y, -1.0, 0.56, 0.24) || C(x, y, -0.5, 0.56, 0.24)
-        || C(x, y, 0.5, 0.56, 0.24) || C(x, y, 1.0, 0.56, 0.24)
-        || R(x, y, -0.35, -0.85, 0.35, -0.6) },
-    { id: 'star', s: [0, -1.1], t: [0.65, 1.0], code: 'ST', name: 'ほし', box: [-1.3, -1.3, 1.3, 1.3],
+    { id: 'star', cat: 'いつも', s: [0, -1.1], t: [0.65, 1.0], code: 'ST', name: 'ほし', box: [-1.3, -1.3, 1.3, 1.3],
       f: (x, y) => P(x, y, star, 0.07) },
+    // ---- はる ----
+    { id: 'sakura', cat: 'はる', s: [0, -1.2], t: [0.75, 1.0], code: 'SA', name: 'さくら', box: [-1.3, -1.3, 1.3, 1.3],
+      f: (x, y) => {
+        if (C(x, y, 0, 0.05, 0.3)) return true;
+        for (let k = 0; k < 5; k++) {
+          const a = -Math.PI / 2 + k * 2 * Math.PI / 5;
+          const ca = Math.cos(a), sa = Math.sin(a);
+          if (E(x, y, 0.66 * ca, 0.05 + 0.66 * sa, 0.46, 0.33, a)
+              && !C(x, y, 1.14 * ca, 0.05 + 1.14 * sa, 0.17)) return true;
+        }
+        return false;
+      } },
+    { id: 'tulip', cat: 'はる', s: [-0.6, -1.2], t: [0, 1.3], code: 'TU', name: 'チューリップ', box: [-1.2, -1.4, 1.2, 1.4],
+      f: (x, y) => (E(x, y, 0, -0.38, 0.62, 0.6) && y >= -0.42)
+        || P(x, y, [[-0.62, -0.42], [-0.6, -1.08], [-0.28, -0.72], [0, -1.12], [0.28, -0.72], [0.6, -1.08], [0.62, -0.42]], 0)
+        || R(x, y, -0.13, 0.1, 0.13, 1.15)
+        || E(x, y, -0.42, 0.62, 0.42, 0.17, 0.6)
+        || E(x, y, 0.42, 0.72, 0.42, 0.17, -0.6) },
+    // ---- なつ ----
+    { id: 'ice', cat: 'なつ', s: [0, -1.4], t: [0, 1.4], code: 'IC', name: 'アイス', box: [-1.2, -1.5, 1.2, 1.5],
+      f: (x, y) => E(x, y, 0, -0.32, 0.72, 0.34) || E(x, y, 0, -0.72, 0.52, 0.28) || E(x, y, 0, -1.02, 0.28, 0.22)
+        || P(x, y, [[-0.6, -0.12], [0.6, -0.12], [0, 1.25]], 0.05) },
+    { id: 'suika', cat: 'なつ', s: [-1.25, -0.1], t: [1.25, -0.1], code: 'SU', name: 'すいか', box: [-1.4, -1.4, 1.4, 1.4],
+      f: (x, y) => C(x, y, 0, -0.35, 1.25) && y >= -0.35 },
+    // ---- あき・ハロウィン ----
+    { id: 'acorn', cat: 'あき', s: [0, -1.1], t: [0, 1.1], code: 'DG', name: 'どんぐり', box: [-1.0, -1.2, 1.0, 1.2],
+      f: (x, y) => E(x, y, 0, -0.35, 0.72, 0.38) || R(x, y, -0.13, -0.95, 0.13, -0.6)
+        || (E(x, y, 0, 0.12, 0.58, 0.85) && y >= -0.35) },
+    { id: 'ginkgo', cat: 'あき', s: [-1.0, -0.7], t: [0, 1.2], code: 'IT', name: 'いちょう', box: [-1.6, -1.4, 1.6, 1.4],
+      f: (x, y) => {
+        const dx = x, dy = y - 0.75, r = Math.sqrt(dx * dx + dy * dy);
+        const ang = Math.atan2(dx, -dy);
+        const fan = r <= 1.65 && Math.abs(ang) <= 0.95 && !(Math.abs(dx) < 0.13 && y < -0.4);
+        return fan || R(x, y, -0.12, 0.4, 0.12, 1.2);
+      } },
+    { id: 'pumpkin', cat: 'あき', s: [0.1, -1.1], t: [0, 1.0], code: 'PK', name: 'かぼちゃ', box: [-1.4, -1.3, 1.4, 1.2],
+      f: (x, y) => {
+        const body = E(x, y, -0.5, 0.12, 0.62, 0.75) || E(x, y, 0.5, 0.12, 0.62, 0.75) || E(x, y, 0, 0.12, 0.72, 0.8);
+        const stem = P(x, y, [[-0.14, -0.55], [0.14, -0.55], [0.3, -1.0], [0.04, -1.0]], 0);
+        const face = P(x, y, [[-0.62, -0.02], [-0.18, -0.02], [-0.4, -0.38]], 0)
+          || P(x, y, [[0.62, -0.02], [0.18, -0.02], [0.4, -0.38]], 0)
+          || P(x, y, [[-0.5, 0.3], [0.5, 0.3], [0.34, 0.56], [0.17, 0.44], [0, 0.6], [-0.17, 0.44], [-0.34, 0.56]], 0);
+        return (body && !face) || stem;
+      } },
+    { id: 'ghost', cat: 'あき', s: [0, -1.1], t: [0.5, 1.0], code: 'GH', name: 'おばけ', box: [-1.4, -1.3, 1.4, 1.2],
+      f: (x, y) => {
+        const body = C(x, y, 0, -0.3, 0.75) || R(x, y, -0.75, -0.3, 0.75, 0.72)
+          || C(x, y, -0.5, 0.72, 0.25) || C(x, y, 0, 0.72, 0.25) || C(x, y, 0.5, 0.72, 0.25);
+        const arms = E(x, y, -0.88, 0.05, 0.32, 0.17, -0.5) || E(x, y, 0.88, 0.05, 0.32, 0.17, 0.5);
+        const eyes = E(x, y, -0.27, -0.35, 0.13, 0.2) || E(x, y, 0.27, -0.35, 0.13, 0.2);
+        return (body || arms) && !eyes;
+      } },
+    // ---- ふゆ・クリスマス ----
+    { id: 'mitten', cat: 'ふゆ', s: [0.1, -1.0], t: [0.0, 1.0], code: 'MI', name: 'てぶくろ', box: [-1.2, -1.2, 1.0, 1.2],
+      f: (x, y) => RR(x, y, -0.45, -0.95, 0.6, 0.55, 0.5) || E(x, y, -0.62, -0.02, 0.22, 0.42, -0.55)
+        || R(x, y, -0.55, 0.48, 0.7, 0.95) },
+    { id: 'tree', cat: 'ふゆ', s: [0, -1.4], t: [0, 1.1], code: 'XT', name: 'ツリー', box: [-1.2, -1.5, 1.2, 1.1],
+      f: (x, y) => C(x, y, 0, -1.12, 0.2)
+        || P(x, y, [[0, -1.0], [0.5, -0.42], [-0.5, -0.42]], 0.04)
+        || P(x, y, [[0, -0.72], [0.76, 0.06], [-0.76, 0.06]], 0.04)
+        || P(x, y, [[0, -0.32], [1.0, 0.56], [-1.0, 0.56]], 0.04)
+        || R(x, y, -0.22, 0.5, 0.22, 0.95) },
+    { id: 'sock', cat: 'ふゆ', s: [0, -1.2], t: [1.1, 0.4], code: 'SK', name: 'くつした', box: [-1.0, -1.3, 1.2, 1.0],
+      f: (x, y) => R(x, y, -0.5, -1.05, 0.45, -0.72) || R(x, y, -0.4, -0.75, 0.35, 0.3)
+        || RR(x, y, -0.4, 0.0, 0.98, 0.72, 0.36) },
   ];
 })();
 
@@ -727,6 +786,25 @@ function drawIcon(cv, sh) {
 
 function buildUI() {
   const box = document.getElementById('shapes');
+  const SEASONS = [
+    ['いつも', 'いつでも'],
+    ['はる', R('春', 'はる')],
+    ['なつ', R('夏', 'なつ')],
+    ['あき', R('秋', 'あき') + '・ハロウィン'],
+    ['ふゆ', R('冬', 'ふゆ') + '・クリスマス'],
+  ];
+  const grids = {};
+  for (const [key, label] of SEASONS) {
+    const sec = document.createElement('div'); sec.className = 'season' + (key === 'いつも' ? ' all' : '');
+    const h = document.createElement('div'); h.className = 'season-name'; h.innerHTML = label;
+    const gr = document.createElement('div'); gr.className = 'season-grid';
+    sec.append(h, gr); box.appendChild(sec); grids[key] = gr;
+  }
+  const rb = document.createElement('button');
+  rb.className = 'shape-btn'; rb.dataset.id = 'random';
+  rb.innerHTML = '<span class="omakase">？</span><span>おまかせ</span>';
+  rb.addEventListener('click', () => { shapeSel = 'random'; store('shape', 'random'); syncUI(); regenerate(); });
+  grids['いつも'].appendChild(rb);
   for (const sh of SH) {
     const b = document.createElement('button');
     b.className = 'shape-btn'; b.dataset.id = sh.id;
@@ -735,13 +813,8 @@ function buildUI() {
     const t = document.createElement('span'); t.textContent = sh.name;
     b.append(cv, t);
     b.addEventListener('click', () => { shapeSel = sh.id; store('shape', sh.id); syncUI(); regenerate(); });
-    box.appendChild(b);
+    grids[sh.cat].appendChild(b);
   }
-  const rb = document.createElement('button');
-  rb.className = 'shape-btn'; rb.dataset.id = 'random';
-  rb.innerHTML = '<span class="omakase">？</span><span>おまかせ</span>';
-  rb.addEventListener('click', () => { shapeSel = 'random'; store('shape', 'random'); syncUI(); regenerate(); });
-  box.appendChild(rb);
 
   const lv = document.getElementById('levels');
   LEVELS.forEach((L, i) => {
