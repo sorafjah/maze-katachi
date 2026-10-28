@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>カタチめいろ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap">
+<style>
+  /* 左にそうさパネル、右に迷路（たて向きでは上下）。色は明るい青緑1色を中心に */
+  :root {
+    --bg: #f3f6f5;
+    --panel: #ffffff;
+    --line: #cfdcd8;
+    --ink: #1d2b28;
+    --sub: #5b6b67;
+    --accent: #13806f;
+    --accent-dark: #0d5f52;
+    --accent-soft: #e2f2ee;
+    --font: "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    color-scheme: light;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    overflow: hidden;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  rt { font-size: 0.55em; font-weight: 400; }
+  button { font-family: inherit; touch-action: manipulation; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .app {
+    height: 100%;
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  .panel {
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  h1 { font-size: 1.5rem; letter-spacing: 0.06em; color: var(--accent-dark); }
+  .group { display: flex; flex-direction: column; gap: 6px; }
+  .label { font-size: 0.85rem; font-weight: 700; color: var(--sub); letter-spacing: 0.05em; }
+
+  .shapes {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .shape-btn {
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    padding: 5px 2px 4px;
+    min-height: 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    color: var(--ink);
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .shape-btn canvas { width: 40px; height: 40px; display: block; }
+  .shape-btn.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-dark); }
+  .shape-btn .omakase { width: 40px; height: 40px; display: grid; place-items: center; font-size: 1.6rem; color: var(--accent); font-weight: 700; }
+
+  .levels { display: grid; grid-template-columns: repeat(5, 1fr); border: 2px solid var(--accent); border-radius: 10px; overflow: hidden; }
+  .level-btn {
+    background: var(--panel); color: var(--accent-dark); border: none; border-right: 1px solid var(--accent);
+    min-height: 48px; font-size: 0.74rem; white-space: nowrap; font-weight: 700; cursor: pointer; line-height: 1.2; padding: 4px 2px;
+  }
+  .level-btn:last-child { border-right: none; }
+  .level-btn small { display: block; font-size: 0.65rem; font-weight: 400; }
+  .level-btn.active { background: var(--accent); color: #fff; }
+
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .btn {
+    min-height: 46px; border-radius: 10px; border: 2px solid var(--accent);
+    background: var(--panel); color: var(--accent-dark);
+    font-size: 0.95rem; font-weight: 700; cursor: pointer; padding: 4px 8px;
+  }
+  .btn.main { background: var(--accent); color: #fff; grid-column: 1 / -1; font-size: 1.1rem; min-height: 54px; }
+  .btn.on { background: var(--accent); color: #fff; }
+  .btn:disabled { opacity: 0.45; cursor: wait; }
+  .btn.small { font-size: 0.82rem; }
+
+  .id-row { display: flex; gap: 6px; }
+  .id-row input {
+    flex: 1; min-width: 0; min-height: 46px; padding: 0 10px; font-size: 1rem; font-family: inherit;
+    border: 2px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--panel);
+    text-transform: uppercase; -webkit-user-select: text; user-select: text;
+  }
+  .note { font-size: 0.85rem; color: var(--sub); line-height: 1.7; min-height: 1.7em; }
+  .note b { color: var(--ink); }
+  .progress { display: inline-block; width: 140px; height: 8px; border-radius: 4px; background: var(--accent-soft); vertical-align: middle; overflow: hidden; margin-left: 6px; }
+  .progress > span { display: block; height: 100%; width: 3%; background: var(--accent); }
+
+  .stage {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+    min-width: 0; min-height: 0;
+  }
+  .paper { background: #fff; box-shadow: 0 2px 10px rgba(20, 60, 50, 0.12); border-radius: 4px; padding: 10px; }
+  #mazeCanvas { display: block; }
+  .toast {
+    position: absolute; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+    background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 0.95rem;
+    opacity: 0; transition: opacity 0.2s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+
+  /* たて向き・せまい画面：上にパネル、下に迷路 */
+  @media (max-aspect-ratio: 1/1), (max-width: 760px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .panel { border-right: none; border-bottom: 1px solid var(--line); max-height: 48vh; padding: 12px 16px; gap: 10px; }
+    .shapes { grid-template-columns: repeat(7, 1fr); }
+    .actions { grid-template-columns: repeat(3, 1fr); }
+    .btn.main { grid-column: auto; font-size: 1rem; }
+  }
+  @media (max-width: 560px) {
+    .shapes { grid-template-columns: repeat(5, 1fr); }
+    .actions { grid-template-columns: 1fr 1fr; }
+    .btn.main { grid-column: 1 / -1; }
+  }
+
+  .print-header { display: none; }
+  @media print {
+    @page { size: A4 portrait; margin: 5mm 5mm 5mm 15mm; }
+    html, body { height: auto; overflow: visible; background: #fff; }
+    .app { display: block; padding: 0; }
+    .panel, .toast { display: none !important; }
+    .stage { display: block; padding: 0; }
+    .paper { box-shadow: none; padding: 0; border-radius: 0; }
+    .print-header {
+      display: flex; align-items: baseline; gap: 4mm; width: 190mm; margin-bottom: 4mm;
+      font-size: 12pt; color: #000;
+    }
+    .print-header .name-line { flex: 1; border-bottom: 1.5px solid #000; min-height: 1.3em; }
+    .print-header .maze-id { font-weight: 700; border-bottom: 1.5px solid #000; padding: 0 1mm; white-space: nowrap; }
+    .print-header .answer-mark { display: none; font-weight: 700; border: 1.5px solid #000; padding: 0 3mm; }
+    body.show-answer .print-header .answer-mark { display: inline-block; }
+    #mazeCanvas { width: 190mm !important; height: auto !important; margin: 0 auto; }
+    #mazeCanvas.tall { width: auto !important; height: 265mm !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="panel scroll">
+    <h1>カタチめいろ</h1>
+
+    <div class="group">
+      <div class="label">かたち</div>
+      <div class="shapes" id="shapes"></div>
+    </div>
+
+    <div class="group">
+      <div class="label">むずかしさ</div>
+      <div class="levels" id="levels"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn main" id="genBtn">つくる</button>
+      <button class="btn" id="answerBtn">こたえ</button>
+      <button class="btn" id="printBtn"><ruby>印刷<rt>いんさつ</rt></ruby></button>
+      <button class="btn small" id="fileBtn"><ruby>印刷用<rt>いんさつよう</rt></ruby>ファイル</button>
+      <button class="btn small" id="copyBtn">HTMLをコピー</button>
+    </div>
+
+    <div class="group">
+      <div class="label"><ruby>番号<rt>ばんごう</rt></ruby>で よびだす</div>
+      <div class="id-row">
+        <input id="idInput" type="text" placeholder="れい HA3-0482" autocomplete="off" aria-label="迷路の番号">
+        <button class="btn" id="recallBtn">よびだす</button>
+      </div>
+    </div>
+
+    <div class="note" id="info"></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="paper" id="paper">
+      <div class="print-header">
+        <span>なまえ：</span><span class="name-line"></span>
+        <span class="maze-id" id="mazeId"></span>
+        <span class="answer-mark">こたえ</span>
+      </div>
+      <canvas id="mazeCanvas"></canvas>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// かたち（型）の定義
+//  inside(x, y) が true の場所が迷路になる。y は下向きが＋。
+//  box は形を探す範囲（実際の大きさは自動で測る）
+// ============================================================
+const SH = (() => {
+  const C = (x, y, cx, cy, r) => (x - cx) ** 2 + (y - cy) ** 2 <= r * r;
+  const E = (x, y, cx, cy, rx, ry, ang) => {
+    let dx = x - cx, dy = y - cy;
+    if (ang) {
+      const c = Math.cos(-ang), s = Math.sin(-ang);
+      const nx = dx * c - dy * s, ny = dx * s + dy * c;
+      dx = nx; dy = ny;
+    }
+    return (dx / rx) ** 2 + (dy / ry) ** 2 <= 1;
+  };
+  const R = (x, y, x0, y0, x1, y1) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
+  const RR = (x, y, x0, y0, x1, y1, r) => {
+    const cx = Math.max(x0 + r, Math.min(x1 - r, x));
+    const cy = Math.max(y0 + r, Math.min(y1 - r, y));
+    return (x - cx) ** 2 + (y - cy) ** 2 <= r * r;
+  };
+  function inPoly(x, y, p) {
+    let ins = false;
+    for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
+      const xi = p[i][0], yi = p[i][1], xj = p[j][0], yj = p[j][1];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) ins = !ins;
+    }
+    return ins;
+  }
+  function segDist(x, y, a, b) {
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    let t = ((x - a[0]) * dx + (y - a[1]) * dy) / (dx * dx + dy * dy);
+    t = Math.max(0, Math.min(1, t));
+    const ex = a[0] + t * dx - x, ey = a[1] + t * dy - y;
+    return Math.sqrt(ex * ex + ey * ey);
+  }
+  // 角を丸めた多角形（多角形から r 以内）
+  const P = (x, y, p, r) => {
+    if (inPoly(x, y, p)) return true;
+    if (!r) return false;
+    for (let i = 0, j = p.length - 1; i < p.length; j = i++) if (segDist(x, y, p[j], p[i]) <= r) return true;
+    return false;
+  };
+  function starPts(cx, cy, R1, R2, k) {
+    const pts = [];
+    for (let i = 0; i < k * 2; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / k;
+      const rr = i % 2 ? R2 : R1;
+      pts.push([cx + rr * Math.cos(a), cy + rr * Math.sin(a)]);
+    }
+    return pts;
+  }
+  const star = starPts(0, 0.08, 1.0, 0.52, 5);
+
+  return [
+    { id: 'heart', s: [-0.55, -1.0], t: [0, 1.3], code: 'HA', name: 'ハート', box: [-1.5, -1.5, 1.5, 1.5],
+      f: (x, y) => { const X = x / 1.05, Y = -(y * 1.05) + 0.1; const a = X * X + Y * Y - 1; return a * a * a - X * X * Y * Y * Y <= 0; } },
+    { id: 'apple', s: [0, -1.1], t: [0, 1.2], code: 'AP', name: 'リンゴ', box: [-1.4, -1.4, 1.4, 1.4],
+      f: (x, y) => (C(x, y, -0.36, 0.12, 0.72) || C(x, y, 0.36, 0.12, 0.72) || E(x, y, 0, 0.42, 0.85, 0.62))
+        && !C(x, y, 0, -0.72, 0.2)
+        || R(x, y, -0.11, -1.0, 0.11, -0.5)
+        || E(x, y, 0.38, -0.86, 0.36, 0.17, -0.5) },
+    { id: 'onigiri', s: [0, -1.2], t: [1.1, 1.0], code: 'ON', name: 'おにぎり', box: [-1.5, -1.5, 1.5, 1.3],
+      f: (x, y) => P(x, y, [[0, -0.75], [0.82, 0.62], [-0.82, 0.62]], 0.36) },
+    { id: 'fish', s: [-1.4, 0], t: [1.5, 0.8], code: 'FI', name: 'さかな', box: [-1.6, -1.2, 1.8, 1.2],
+      f: (x, y) => E(x, y, -0.25, 0, 1.05, 0.62)
+        || P(x, y, [[0.55, 0], [1.45, -0.72], [1.2, 0], [1.45, 0.72]], 0.08)
+        || E(x, y, -0.05, -0.62, 0.45, 0.2, 0.15) },
+    { id: 'snowman', s: [0, -1.4], t: [0, 1.3], code: 'SN', name: 'ゆきだるま', box: [-1.2, -1.6, 1.2, 1.4],
+      f: (x, y) => C(x, y, 0, -0.42, 0.46) || C(x, y, 0, 0.5, 0.66)
+        || R(x, y, -0.3, -1.25, 0.3, -0.78) || R(x, y, -0.45, -0.9, 0.45, -0.78) },
+    { id: 'house', s: [0.52, -1.1], t: [0, 1.0], code: 'HO', name: 'いえ', box: [-1.3, -1.3, 1.3, 1.2],
+      f: (x, y) => P(x, y, [[-1.05, -0.08], [0, -1.0], [1.05, -0.08]], 0)
+        || R(x, y, -0.78, -0.12, 0.78, 0.92)
+        || R(x, y, 0.38, -1.0, 0.66, -0.4) },
+    { id: 'rocket', s: [0, -1.5], t: [0, 1.2], code: 'RO', name: 'ロケット', box: [-1.2, -1.6, 1.2, 1.4],
+      f: (x, y) => R(x, y, -0.42, -0.55, 0.42, 0.85)
+        || (E(x, y, 0, -0.55, 0.42, 0.85) && y <= -0.55)
+        || P(x, y, [[-0.42, 0.15], [-0.92, 0.75], [-0.92, 1.05], [-0.42, 0.85]], 0)
+        || P(x, y, [[0.42, 0.15], [0.92, 0.75], [0.92, 1.05], [0.42, 0.85]], 0)
+        || R(x, y, -0.27, 0.85, 0.27, 1.12) },
+    { id: 'car', s: [-1.6, 0.2], t: [1.6, 0.3], code: 'CA', name: 'くるま', box: [-1.8, -1.2, 1.8, 1.2],
+      f: (x, y) => RR(x, y, -1.45, -0.12, 1.45, 0.62, 0.22)
+        || P(x, y, [[-0.85, -0.08], [-0.5, -0.72], [0.55, -0.72], [0.95, -0.08]], 0.08)
+        || C(x, y, -0.82, 0.62, 0.36) || C(x, y, 0.82, 0.62, 0.36) },
+    { id: 'cat', s: [-0.8, -1.1], t: [0.8, -1.1], code: 'NE', name: 'ネコ', box: [-1.4, -1.4, 1.4, 1.2],
+      f: (x, y) => E(x, y, 0, 0.18, 1.02, 0.78)
+        || P(x, y, [[-1.0, -0.15], [-0.78, -1.05], [-0.18, -0.52]], 0.06)
+        || P(x, y, [[1.0, -0.15], [0.78, -1.05], [0.18, -0.52]], 0.06) },
+    { id: 'rabbit', s: [-0.45, -1.3], t: [0.45, -1.3], code: 'US', name: 'ウサギ', box: [-1.2, -1.6, 1.2, 1.4],
+      f: (x, y) => E(x, y, 0, 0.52, 0.8, 0.62)
+        || E(x, y, -0.36, -0.5, 0.25, 0.68, -0.12)
+        || E(x, y, 0.36, -0.5, 0.25, 0.68, 0.12) },
+    { id: 'train', s: [-1.7, -0.1], t: [1.7, 0], code: 'TR', name: 'でんしゃ', box: [-1.9, -1.2, 1.9, 1.2],
+      f: (x, y) => RR(x, y, -1.55, -0.62, 1.55, 0.52, 0.3)
+        || C(x, y, -1.0, 0.56, 0.24) || C(x, y, -0.5, 0.56, 0.24)
+        || C(x, y, 0.5, 0.56, 0.24) || C(x, y, 1.0, 0.56, 0.24)
+        || R(x, y, -0.35, -0.85, 0.35, -0.6) },
+    { id: 'star', s: [0, -1.1], t: [0.65, 1.0], code: 'ST', name: 'ほし', box: [-1.3, -1.3, 1.3, 1.3],
+      f: (x, y) => P(x, y, star, 0.07) },
+  ];
+})();
+
+// 形を細かく測って、実際に形がある範囲と、範囲の中で形がしめる割合を出す
+function measureShape(sh) {
+  if (sh._m) return sh._m;
+  const [bx0, by0, bx1, by1] = sh.box;
+  const N = 300;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const pts = [];
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const x = bx0 + (i + 0.5) * (bx1 - bx0) / N, y = by0 + (j + 0.5) * (by1 - by0) / N;
+    if (sh.f(x, y)) { pts.push(x, y); if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  const dx = (bx1 - bx0) / N, dy = (by1 - by0) / N;
+  x0 -= dx / 2; x1 += dx / 2; y0 -= dy / 2; y1 += dy / 2;
+  const cells = pts.length / 2;
+  const fill = cells * dx * dy / ((x1 - x0) * (y1 - y0));
+  sh._m = { x0, y0, x1, y1, aspect: (x1 - x0) / (y1 - y0), fill };
+  return sh._m;
+}
+
+// ============================================================
+// 型 → マス目（型の内側だけが部屋）。まわりに MARGIN マスの余白
+// ============================================================
+const MARGIN = 3;
+function rasterize(sh, area) {
+  const m = measureShape(sh);
+  // 部屋の数がだいたい area になる大きさ
+  const w = Math.max(6, Math.round(Math.sqrt(area * m.aspect / m.fill)));
+  const h = Math.max(6, Math.round(w / m.aspect));
+  const cols = w + MARGIN * 2, rows = h + MARGIN * 2;
+  const mask = new Uint8Array(cols * rows);
+  for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) {
+    const x = m.x0 + (c + 0.5) * (m.x1 - m.x0) / w;
+    const y = m.y0 + (r + 0.5) * (m.y1 - m.y0) / h;
+    if (sh.f(x, y)) mask[(r + MARGIN) * cols + c + MARGIN] = 1;
+  }
+  cleanMask(mask, cols, rows);
+  // 形の座標 → マスの座標
+  const toGrid = (px, py) => [MARGIN + (px - m.x0) / (m.x1 - m.x0) * w - 0.5,
+                              MARGIN + (py - m.y0) / (m.y1 - m.y0) * h - 0.5];
+  return { mask, cols, rows, toGrid };
+}
+
+// 1マスだけの出っぱり（3方向が外）をけずり、いちばん大きいかたまりだけ残す
+function cleanMask(mask, cols, rows) {
+  const at = (r, c) => r >= 0 && r < rows && c >= 0 && c < cols && mask[r * cols + c];
+  for (let pass = 0; pass < 4; pass++) {
+    let changed = false;
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      if (!mask[r * cols + c]) continue;
+      const k = at(r - 1, c) + at(r + 1, c) + at(r, c - 1) + at(r, c + 1);
+      if (k <= 1) { mask[r * cols + c] = 0; changed = true; }
+    }
+    if (!changed) break;
+  }
+  const comp = new Int32Array(cols * rows).fill(-1);
+  let best = -1, bestSize = 0, id = 0;
+  for (let i = 0; i < cols * rows; i++) {
+    if (!mask[i] || comp[i] >= 0) continue;
+    const q = [i]; comp[i] = id; let size = 0;
+    while (q.length) {
+      const u = q.pop(); size++;
+      const r = Math.floor(u / cols), c = u % cols;
+      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const nr = r + dr, nc = c + dc;
+        if (!at(nr, nc)) continue;
+        const v = nr * cols + nc;
+        if (comp[v] < 0) { comp[v] = id; q.push(v); }
+      }
+    }
+    if (size > bestSize) { bestSize = size; best = id; }
+    id++;
+  }
+  for (let i = 0; i < cols * rows; i++) if (mask[i] && comp[i] !== best) mask[i] = 0;
+}
+
+// 型の内側だけで「部屋のつながり」を作る（部屋番号はつめて振る）
+// cellAt[r*cols+c] = 部屋番号（型の外は -1）
+function makeMaskGraph(mask, cols, rows) {
+  const cellAt = new Int32Array(cols * rows).fill(-1);
+  let n = 0;
+  for (let i = 0; i < cols * rows; i++) if (mask[i]) cellAt[i] = n++;
+  const x = new Float64Array(n), y = new Float64Array(n), nbr = [];
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const i = cellAt[r * cols + c];
+    if (i < 0) continue;
+    x[i] = c; y[i] = r;
+    const a = [];
+    if (r > 0 && cellAt[(r - 1) * cols + c] >= 0) a.push(cellAt[(r - 1) * cols + c]);
+    if (c < cols - 1 && cellAt[r * cols + c + 1] >= 0) a.push(cellAt[r * cols + c + 1]);
+    if (r < rows - 1 && cellAt[(r + 1) * cols + c] >= 0) a.push(cellAt[(r + 1) * cols + c]);
+    if (c > 0 && cellAt[r * cols + c - 1] >= 0) a.push(cellAt[r * cols + c - 1]);
+    nbr[i] = a;
+  }
+  return { n, x, y, nbr, cols, rows, cellAt, kind: 'mask' };
+}
+
+// 4方向：0上 1右 2下 3左
+const DIR4 = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+
+// 部屋 i から dir の方向に、型の外が3マス続くか（矢印をかける場所があるか）
+function clearOutside(g, i, dir) {
+  const [dx, dy] = DIR4[dir];
+  for (let k = 1; k <= MARGIN; k++) {
+    const c = g.x[i] + dx * k, r = g.y[i] + dy * k;
+    if (c < 0 || r < 0 || c >= g.cols || r >= g.rows) return false;
+    if (g.cellAt[r * g.cols + c] >= 0) return false;
+  }
+  return true;
+}
+
+// スタートとゴール：形ごとに決めた目安の場所に、いちばん近い「ふち」の部屋。
+//  ふち＝外側に矢印をかける場所（型の外が3マス続く）がある部屋
+//  矢印の向きは、形の中心から見て外向きになる方向を選ぶ
+function pickEnds(g, sh, toGrid) {
+  let cx = 0, cy = 0;
+  for (let i = 0; i < g.n; i++) { cx += g.x[i]; cy += g.y[i]; }
+  cx /= g.n; cy /= g.n;
+  function bestDir(i) {
+    let best = -1, bv = -Infinity;
+    for (let d = 0; d < 4; d++) {
+      if (!clearOutside(g, i, d)) continue;
+      const v = DIR4[d][0] * (g.x[i] - cx) + DIR4[d][1] * (g.y[i] - cy);
+      if (v > bv) { bv = v; best = d; }
+    }
+    return best;
+  }
+  const cand = [];
+  for (let i = 0; i < g.n; i++) if (bestDir(i) >= 0) cand.push(i);
+  function nearest(px, py, avoid) {
+    let best = cand[0], bd = Infinity;
+    for (const i of cand) {
+      if (i === avoid) continue;
+      const d = (g.x[i] - px) ** 2 + (g.y[i] - py) ** 2;
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best;
+  }
+  const [sx, sy] = toGrid(sh.s[0], sh.s[1]);
+  const [tx, ty] = toGrid(sh.t[0], sh.t[1]);
+  const s = nearest(sx, sy, -1);
+  const t = nearest(tx, ty, s);
+  return { s, t, sDir: bestDir(s), tDir: bestDir(t) };
+}
+
+// ============================================================
+// ここから下は ムズめいろ の迷路エンジン（形に依存しない部分）
+// ============================================================
+
+// --- 乱数（シード付き） ---
+function makeRng(seed) {
+  let s = seed >>> 0 || 1;
+  return function () {
+    s ^= s << 13; s >>>= 0;
+    s ^= s >>> 17;
+    s ^= s << 5; s >>>= 0;
+    return s / 4294967296;
+  };
+}
+
+// --- 最初の迷路：成長木（新しい部屋から掘る＋ときどきランダム） ---
+function carveTree(g, rng, start, randomProb) {
+  const open = Array.from({ length: g.n }, () => []);
+  const visited = new Uint8Array(g.n);
+  const stack = [start];
+  visited[start] = 1;
+  while (stack.length) {
+    const idx = (rng() < randomProb && stack.length > 1)
+      ? Math.floor(rng() * stack.length) : stack.length - 1;
+    const cur = stack[idx];
+    const cand = g.nbr[cur].filter(v => !visited[v]);
+    if (!cand.length) { stack.splice(idx, 1); continue; }
+    const v = cand[Math.floor(rng() * cand.length)];
+    open[cur].push(v); open[v].push(cur);
+    visited[v] = 1;
+    stack.push(v);
+  }
+  return open;
+}
+
+// 難しさの測定（人が解くときに歩き回るマス数の期待値）
+const MODEL = { LOOK: 3, BETA: 0.45, SHORT: 2 };
+
+const _buf = { n: -1 };
+function getBuf(n) {
+  if (_buf.n !== n) {
+    _buf.n = n;
+    _buf.order = new Int32Array(n);
+    _buf.onPath = new Uint8Array(n);
+    _buf.h = new Int32Array(n);
+    _buf.eff = new Float64Array(n);
+  }
+  return _buf;
+}
+function evaluate(g, open, s, t, model, out) {
+  const M = model || MODEL;
+  const n = g.n;
+  const B = getBuf(n);
+  const parent = out ? out.parent : new Int32Array(n);
+  const depth = out ? out.depth : new Int32Array(n);
+  parent.fill(-1);
+  const order = B.order;
+  let head = 0, tail = 0;
+  order[tail++] = s; parent[s] = s; depth[s] = 0;
+  while (head < tail) {
+    const u = order[head++];
+    const ou = open[u];
+    for (let k = 0; k < ou.length; k++) {
+      const v = ou[k];
+      if (parent[v] === -1) { parent[v] = u; depth[v] = depth[u] + 1; order[tail++] = v; }
+    }
+  }
+  if (parent[t] === -1) return null;
+
+  const onPath = B.onPath; onPath.fill(0);
+  const path = [];
+  for (let v = t; ; v = parent[v]) { onPath[v] = 1; path.push(v); if (v === s) break; }
+  path.reverse();
+
+  const h = B.h, eff = B.eff;
+  for (let k = tail - 1; k >= 0; k--) {
+    const v = order[k];
+    if (onPath[v]) continue;
+    let hv = 0, sum = 0;
+    const ov = open[v];
+    for (let q = 0; q < ov.length; q++) {
+      const c = ov[q];
+      if (c === parent[v]) continue;
+      if (h[c] + 1 > hv) hv = h[c] + 1;
+      sum += eff[c];
+    }
+    h[v] = hv;
+    eff[v] = (hv + 1 > M.SHORT) ? 1 + sum : 0;
+  }
+
+  const tx = g.x[t], ty = g.y[t], sx = g.x[s], sy = g.y[s];
+  function lookEnd(j, v) {
+    let prev = j, cur = v;
+    for (let step = 1; step < M.LOOK; step++) {
+      const oc = open[cur];
+      if (oc.length !== 2) break;
+      const nx = oc[0] === prev ? oc[1] : oc[0];
+      prev = cur; cur = nx;
+    }
+    return cur;
+  }
+  function weight(j, v, gx, gy) {
+    const e = lookEnd(j, v);
+    const dx = g.x[e] - gx, dy = g.y[e] - gy;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    return Math.exp(-M.BETA * d);
+  }
+
+  let wasteF = 0, wasteB = 0;
+  let branchPoints = 0;
+  const sectionWaste = [0, 0, 0, 0, 0];
+  const L = path.length;
+  for (let i = 0; i < L; i++) {
+    const j = path[i];
+    const nextF = i < L - 1 ? path[i + 1] : -1;
+    const nextB = i > 0 ? path[i - 1] : -1;
+    const oj = open[j];
+    let had = false;
+    for (let q = 0; q < oj.length; q++) {
+      const v = oj[q];
+      if (onPath[v]) continue;
+      const cost = 2 * eff[v];
+      if (cost === 0) continue;
+      had = true;
+      const wv_f = weight(j, v, tx, ty);
+      const wv_b = weight(j, v, sx, sy);
+      let pf = 1, pb = 1;
+      if (nextF >= 0) { const wc = weight(j, nextF, tx, ty); pf = wv_f / (wv_f + wc); }
+      if (nextB >= 0) { const wc = weight(j, nextB, sx, sy); pb = wv_b / (wv_b + wc); }
+      wasteF += pf * cost;
+      wasteB += pb * cost;
+      sectionWaste[Math.min(4, Math.floor(i * 5 / L))] += Math.min(pf, pb) * cost;
+    }
+    if (had) branchPoints++;
+  }
+  const forward = L + wasteF, backward = L + wasteB;
+  return {
+    effort: Math.min(forward, backward),
+    forward, backward, pathLen: L, branchPoints, sectionWaste,
+    parent, depth, path,
+  };
+}
+
+function removeEdge(open, a, b) {
+  let i = open[a].indexOf(b); open[a].splice(i, 1);
+  i = open[b].indexOf(a); open[b].splice(i, 1);
+}
+function addEdge(open, a, b) { open[a].push(b); open[b].push(a); }
+
+function balance(ev) {
+  const sw = ev.sectionWaste;
+  const tot = sw.reduce((a, b) => a + b, 0) || 1;
+  return Math.min(...sw) / (tot / 5);
+}
+function objective(ev, target) {
+  const sw = ev.sectionWaste;
+  let lg = 0;
+  for (let i = 0; i < 5; i++) lg += Math.log(sw[i] + 1);
+  const spread = ev.pathLen + 5 * (Math.exp(lg / 5) - 1);
+  return target ? Math.min(spread, target * 1.04) : spread;
+}
+
+function createOptimizer(g, open, s, t, opts) {
+  const rng = opts.rng;
+  const maxIters = opts.maxIters;
+  const target = opts.target || 0;
+  const bufA = { parent: new Int32Array(g.n), depth: new Int32Array(g.n) };
+  let bufB = { parent: new Int32Array(g.n), depth: new Int32Array(g.n) };
+  let ev = evaluate(g, open, s, t, null, bufA);
+  let cur = objective(ev, target);
+  let temp = opts.temp0 || cur * 0.0005;
+  const cool = Math.pow(0.02, 1 / maxIters);
+  let it = 0;
+  const self = {
+    get ev() { return ev; },
+    get iters() { return it; },
+    done() {
+      return it >= maxIters || (target && ev.effort >= target && balance(ev) > 0.6);
+    },
+    step(n) {
+      for (let q = 0; q < n; q++) {
+        if (self.done()) return true;
+        it++;
+        temp *= cool;
+        const u = Math.floor(rng() * g.n);
+        const nb = g.nbr[u];
+        if (!nb.length) continue;
+        const v = nb[Math.floor(rng() * nb.length)];
+        if (open[u].indexOf(v) >= 0) continue;
+        const par = ev.parent, dep = ev.depth;
+        const pu = [], pv = [];
+        let a = u, b = v;
+        while (dep[a] > dep[b]) { pu.push(a); a = par[a]; }
+        while (dep[b] > dep[a]) { pv.push(b); b = par[b]; }
+        while (a !== b) { pu.push(a); pv.push(b); a = par[a]; b = par[b]; }
+        const edges = pu.length + pv.length;
+        if (edges === 0) continue;
+        const k = Math.floor(rng() * edges);
+        const x = k < pu.length ? pu[k] : pv[k - pu.length];
+        const y = par[x];
+        removeEdge(open, x, y);
+        addEdge(open, u, v);
+        const ev2 = evaluate(g, open, s, t, null, bufB);
+        const val = ev2 ? objective(ev2, target) : -1;
+        if (val >= cur || (val > 0 && rng() < Math.exp((val - cur) / temp))) {
+          bufB = { parent: ev.parent, depth: ev.depth };
+          ev = ev2; cur = val;
+        } else {
+          removeEdge(open, u, v);
+          addEdge(open, x, y);
+        }
+      }
+      return self.done();
+    },
+  };
+  return self;
+}
+
+
+// ============================================================
+// むずかしさ
+//  area：部屋のだいたいの数 / mult：ムズめいろの「ちょいむず」を1としたときの目標
+//  iters：育てる回数の上限（時間ではなく回数で止めるので、同じ番号なら必ず同じ迷路）
+// ============================================================
+const BASE_EFFORT = 711;
+const LEVELS = [
+  { name: 'やさしい',   area: 200,  mult: 0.25, iters: 30000 },
+  { name: 'ふつう',     area: 420,  mult: 0.5,  iters: 60000 },
+  { name: 'ちょいむず', area: 800,  mult: 1,    iters: 120000 },
+  { name: 'むずい',     area: 1300, mult: 2,    iters: 200000 },
+  { name: 'げきむず',   area: 1900, mult: 3,    iters: 250000 },
+];
+
+let shapeSel = 'heart';   // 'random' もある
+let levelSel = 1;
+let showAnswer = false;
+let current = null;
+let jobId = 0;
+
+const canvas = document.getElementById('mazeCanvas');
+const ctx = canvas.getContext('2d');
+const infoEl = document.getElementById('info');
+const R = (k, r) => `<ruby>${k}<rt>${r}</rt></ruby>`;
+
+function store(key, val) { try { localStorage.setItem('katachi-' + key, val); } catch (e) {} }
+function load(key) { try { return localStorage.getItem('katachi-' + key); } catch (e) { return null; } }
+
+// ============================================================
+// 画面の部品
+// ============================================================
+function drawIcon(cv, sh) {
+  const { mask, cols, rows } = rasterize(sh, 260);
+  const S = 2, size = 40;
+  cv.width = size * S; cv.height = size * S;
+  const c = cv.getContext('2d');
+  const inner = { c0: MARGIN, r0: MARGIN, w: cols - 2 * MARGIN, h: rows - 2 * MARGIN };
+  const k = (size * S - 4) / Math.max(inner.w, inner.h);
+  const ox = (size * S - inner.w * k) / 2, oy = (size * S - inner.h * k) / 2;
+  c.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#13806f';
+  for (let r = 0; r < rows; r++) for (let q = 0; q < cols; q++) {
+    if (!mask[r * cols + q]) continue;
+    c.fillRect(ox + (q - inner.c0) * k, oy + (r - inner.r0) * k, k + 0.6, k + 0.6);
+  }
+}
+
+function buildUI() {
+  const box = document.getElementById('shapes');
+  for (const sh of SH) {
+    const b = document.createElement('button');
+    b.className = 'shape-btn'; b.dataset.id = sh.id;
+    const cv = document.createElement('canvas');
+    drawIcon(cv, sh);
+    const t = document.createElement('span'); t.textContent = sh.name;
+    b.append(cv, t);
+    b.addEventListener('click', () => { shapeSel = sh.id; store('shape', sh.id); syncUI(); regenerate(); });
+    box.appendChild(b);
+  }
+  const rb = document.createElement('button');
+  rb.className = 'shape-btn'; rb.dataset.id = 'random';
+  rb.innerHTML = '<span class="omakase">？</span><span>おまかせ</span>';
+  rb.addEventListener('click', () => { shapeSel = 'random'; store('shape', 'random'); syncUI(); regenerate(); });
+  box.appendChild(rb);
+
+  const lv = document.getElementById('levels');
+  LEVELS.forEach((L, i) => {
+    const b = document.createElement('button');
+    b.className = 'level-btn'; b.dataset.lv = i;
+    b.innerHTML = `${L.name}<small>×${L.mult}</small>`;
+    b.addEventListener('click', () => { levelSel = i; store('level', i); syncUI(); regenerate(); });
+    lv.appendChild(b);
+  });
+}
+function syncUI() {
+  document.querySelectorAll('.shape-btn').forEach(b => b.classList.toggle('active', b.dataset.id === shapeSel));
+  document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('active', +b.dataset.lv === levelSel));
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ============================================================
+// 番号：かたちのコード＋むずかしさ（1〜5）＋4けた。例 HA3-0482
+// ============================================================
+function mazeIdString(sh, lv, seed) { return sh.code + (lv + 1) + '-' + String(seed).padStart(4, '0'); }
+function seedFor(sh, lv, seed) {
+  let h = Math.imul(seed + 1, 2654435761) ^ Math.imul(sh.code.charCodeAt(0) * 31 + sh.code.charCodeAt(1) + lv * 977, 40503);
+  h = Math.imul(h ^ (h >>> 15), 2246822519);
+  h = Math.imul(h ^ (h >>> 13), 3266489917);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+// かたち・むずかしさごとのマス目は使い回す
+const gridCache = {};
+function getGrid(sh, lv) {
+  const key = sh.id + lv;
+  if (!gridCache[key]) {
+    const { mask, cols, rows, toGrid } = rasterize(sh, LEVELS[lv].area);
+    const g = makeMaskGraph(mask, cols, rows);
+    const ends = pickEnds(g, sh, toGrid);
+    gridCache[key] = { g, ends };
+  }
+  return gridCache[key];
+}
+
+// ============================================================
+// つくる
+// ============================================================
+function setBusy(b) {
+  ['genBtn', 'printBtn', 'fileBtn', 'copyBtn', 'recallBtn'].forEach(id => document.getElementById(id).disabled = b);
+}
+
+function regenerate(forced) {
+  const myJob = ++jobId;
+  let sh, lv = levelSel, seed;
+  if (forced) { sh = forced.sh; lv = forced.lv; seed = forced.seed; }
+  else {
+    sh = shapeSel === 'random'
+      ? SH[Math.floor(Math.random() * SH.length)]
+      : SH.find(s => s.id === shapeSel);
+    seed = Math.floor(Math.random() * 10000);
+  }
+  const L = LEVELS[lv];
+  const { g, ends } = getGrid(sh, lv);
+  const rng = makeRng(seedFor(sh, lv, seed));
+  const open = carveTree(g, rng, ends.t, 0.25);
+  const target = BASE_EFFORT * L.mult;
+  const opt = createOptimizer(g, open, ends.s, ends.t, { rng, target, maxIters: L.iters });
+
+  setBusy(true);
+  infoEl.innerHTML = `つくっているよ… <span class="progress"><span id="bar"></span></span>`;
+  const startEffort = opt.ev.effort;
+
+  function tick() {
+    if (myJob !== jobId) return;
+    const end = performance.now() + 40;
+    let done = false;
+    while (!done && performance.now() < end) done = opt.step(200);
+    if (!done) {
+      const p = Math.min(1, Math.max(0, (opt.ev.effort - startEffort) / (target - startEffort || 1)));
+      const bar = document.getElementById('bar');
+      if (bar) bar.style.width = Math.max(3, p * 100).toFixed(0) + '%';
+      setTimeout(tick, 0);
+      return;
+    }
+    const ev = opt.ev;
+    current = { sh, lv, seed, g, ends, open, path: ev.path, ev };
+    setBusy(false);
+    drawMaze();
+    showResult();
+  }
+  setTimeout(tick, 20);
+}
+
+function showResult() {
+  const { sh, lv, seed, ev } = current;
+  const id = mazeIdString(sh, lv, seed);
+  document.getElementById('mazeId').textContent = 'No. ' + id;
+  const m = ev.effort / BASE_EFFORT;
+  infoEl.innerHTML =
+    `${R('番号', 'ばんごう')}：<b>${id}</b>（${sh.name}・${LEVELS[lv].name}）<br>` +
+    `むずかしさ：ムズめいろの「ちょいむず」の <b>${R('約', 'やく')}${m.toFixed(1)}${R('倍', 'ばい')}</b><br>` +
+    `${R('正解', 'せいかい')}の${R('道', 'みち')} ${ev.pathLen}マス・${R('部屋', 'へや')} ${current.g.n}マス`;
+}
+
+// ============================================================
+// かく
+// ============================================================
+const SCALE = 3;
+
+// 白ぬきの矢印。angle=0 で下向き
+function drawArrow(c, cx, cy, size, angle) {
+  const hw = size * 0.45, h = size * 0.85, sw = size * 0.18, headH = size * 0.45;
+  const top = -h / 2, bot = h / 2;
+  c.save();
+  c.translate(cx, cy);
+  c.rotate(angle);
+  c.beginPath();
+  c.moveTo(-sw, top); c.lineTo(-sw, bot - headH); c.lineTo(-hw, bot - headH);
+  c.lineTo(0, bot); c.lineTo(hw, bot - headH); c.lineTo(sw, bot - headH); c.lineTo(sw, top);
+  c.closePath();
+  c.fillStyle = '#fff'; c.fill();
+  c.strokeStyle = '#000'; c.lineWidth = Math.max(2, size * 0.08); c.lineJoin = 'round'; c.stroke();
+  c.restore();
+}
+// 向き（0上 1右 2下 3左）に進む矢印の回転
+const angleOf = d => [Math.PI, -Math.PI / 2, 0, Math.PI / 2][d];
+
+function cellSizeFor(g) { return Math.max(10, Math.min(36, Math.floor(780 / Math.max(g.cols, g.rows)))); }
+
+function renderMaze(c, cell, answer) {
+  const { g, ends, open, path } = current;
+  const W = g.cols * cell, H = g.rows * cell;
+  const wall = Math.max(2, cell * 0.2);
+  c.fillStyle = '#fff';
+  c.fillRect(0, 0, W, H);
+  const cxOf = i => (g.x[i] + 0.5) * cell, cyOf = i => (g.y[i] + 0.5) * cell;
+
+  if (answer && path) {
+    c.strokeStyle = '#9a9a9a';
+    c.lineWidth = Math.max(3, cell * 0.42);
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    c.beginPath();
+    const sd = DIR4[ends.sDir], td = DIR4[ends.tDir];
+    c.moveTo(cxOf(ends.s) + sd[0] * cell * 0.9, cyOf(ends.s) + sd[1] * cell * 0.9);
+    for (const v of path) c.lineTo(cxOf(v), cyOf(v));
+    c.lineTo(cxOf(ends.t) + td[0] * cell * 0.9, cyOf(ends.t) + td[1] * cell * 0.9);
+    c.stroke();
+  }
+
+  // かべ：内側（ふつう）と外がわ（ふとく：形がよく見えるように）
+  const inner = new Path2D(), outer = new Path2D();
+  for (let i = 0; i < g.n; i++) {
+    const x = g.x[i] * cell, y = g.y[i] * cell;
+    for (let d = 0; d < 4; d++) {
+      const nc = g.x[i] + DIR4[d][0], nr = g.y[i] + DIR4[d][1];
+      const j = (nc >= 0 && nr >= 0 && nc < g.cols && nr < g.rows) ? g.cellAt[nr * g.cols + nc] : -1;
+      const seg = [[x, y, x + cell, y], [x + cell, y, x + cell, y + cell], [x, y + cell, x + cell, y + cell], [x, y, x, y + cell]][d];
+      if (j < 0) {
+        if ((i === ends.s && d === ends.sDir) || (i === ends.t && d === ends.tDir)) continue;
+        outer.moveTo(seg[0], seg[1]); outer.lineTo(seg[2], seg[3]);
+      } else if (i < j && open[i].indexOf(j) < 0) {
+        inner.moveTo(seg[0], seg[1]); inner.lineTo(seg[2], seg[3]);
+      }
+    }
+  }
+  c.strokeStyle = '#000';
+  c.lineCap = 'square';
+  c.lineWidth = wall; c.stroke(inner);
+  c.lineWidth = wall * 1.7; c.stroke(outer);
+
+  // 入口・出口の矢印（スタートは中へ、ゴールは外へ）
+  const size = Math.max(20, Math.min(cell * 2.2, 48));
+  const off = cell * 0.5 + size * 0.5 + wall * 1.5;
+  const s = ends.s, sd = DIR4[ends.sDir];
+  drawArrow(c, cxOf(s) + sd[0] * off, cyOf(s) + sd[1] * off, size, angleOf((ends.sDir + 2) % 4));
+  const t = ends.t, td = DIR4[ends.tDir];
+  drawArrow(c, cxOf(t) + td[0] * off, cyOf(t) + td[1] * off, size, angleOf(ends.tDir));
+}
+
+function drawMaze() {
+  if (!current) return;
+  const g = current.g;
+  const cell = cellSizeFor(g);
+  const W = g.cols * cell, H = g.rows * cell;
+  canvas.width = W * SCALE; canvas.height = H * SCALE;
+  ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+  renderMaze(ctx, cell, showAnswer);
+  fitCanvas();
+  canvas.classList.toggle('tall', H / W > 265 / 190);
+}
+function fitCanvas() {
+  if (!current) return;
+  const stage = document.getElementById('stage');
+  const W = canvas.width / SCALE, H = canvas.height / SCALE;
+  const k = Math.min((stage.clientWidth - 52) / W, (stage.clientHeight - 52) / H);
+  canvas.style.width = Math.max(50, Math.floor(W * k)) + 'px';
+  canvas.style.height = Math.max(50, Math.floor(H * k)) + 'px';
+}
+
+// ============================================================
+// 印刷用ファイル（ブラウザで開いて印刷するHTML）
+// ============================================================
+function printableHTML() {
+  const { sh, lv, seed } = current;
+  const id = mazeIdString(sh, lv, seed);
+  const url = canvas.toDataURL('image/png');
+  const W = canvas.width, H = canvas.height;
+  const tall = H / W > 265 / 190;
+  const imgCss = tall ? 'height:265mm;width:auto;' : 'width:190mm;height:auto;';
+  return `<!DOCTYPE html>
+<html lang="ja"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>カタチめいろ ${id}${showAnswer ? ' こたえ' : ''}</title>
+<style>
+@page { size: A4 portrait; margin: 5mm 5mm 5mm 15mm; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "BIZ UDPGothic", "Hiragino Kaku Gothic ProN", sans-serif; font-size: 12pt; color: #000; background: #fff; padding: 10px; }
+.head { display: flex; align-items: baseline; gap: 4mm; width: 190mm; max-width: 100%; margin-bottom: 4mm; }
+.line { flex: 1; border-bottom: 1.5px solid #000; min-height: 1.3em; }
+.id { font-weight: 700; border-bottom: 1.5px solid #000; padding: 0 1mm; white-space: nowrap; }
+.ans { font-weight: 700; border: 1.5px solid #000; padding: 0 3mm; }
+img { display: block; ${imgCss} max-width: 100%; }
+.bar { margin-bottom: 12px; }
+.bar button { font-size: 18px; padding: 10px 24px; min-height: 44px; border-radius: 10px; border: 2px solid #13806f; background: #13806f; color: #fff; font-family: inherit; font-weight: 700; }
+@media print { body { padding: 0; } .bar { display: none; } img { max-width: none; } }
+</style></head><body>
+<div class="bar"><button onclick="window.print()">いんさつする</button></div>
+<div class="head"><span>なまえ：</span><span class="line"></span><span class="id">No. ${id}</span>${showAnswer ? '<span class="ans">こたえ</span>' : ''}</div>
+<img src="${url}" alt="カタチめいろ ${id}">
+</body></html>`;
+}
+
+function downloadPrintable() {
+  if (!current) return;
+  const html = printableHTML();
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'katachi-' + mazeIdString(current.sh, current.lv, current.seed) + (showAnswer ? '-kotae' : '') + '.html';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast('ファイルをほぞんしたよ。ひらいて いんさつしてね');
+}
+
+function copyHTML() {
+  if (!current) return;
+  const ta = document.createElement('textarea');
+  ta.value = printableHTML();
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed'; ta.style.top = '-1000px';
+  document.body.appendChild(ta);
+  ta.select(); ta.setSelectionRange(0, ta.value.length);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) {}
+  ta.remove();
+  toast(ok ? 'HTMLをコピーしたよ' : 'コピーできなかったよ');
+}
+
+// ============================================================
+// 番号から よびだす
+// ============================================================
+function recallById() {
+  const raw = document.getElementById('idInput').value.trim().toUpperCase()
+    .replace(/[Ａ-Ｚ０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+    .replace(/[－ー‐―−]/g, '-');
+  const m = raw.match(/^([A-Z]{2})([1-5])-?(\d{1,4})$/);
+  const sh = m && SH.find(s => s.code === m[1]);
+  if (!sh) {
+    infoEl.innerHTML = `${R('番号', 'ばんごう')}が みつからないよ（れい：HA3-0482）`;
+    return;
+  }
+  shapeSel = sh.id; levelSel = +m[2] - 1;
+  syncUI();
+  regenerate({ sh, lv: levelSel, seed: parseInt(m[3], 10) });
+}
+
+function toggleAnswer() {
+  showAnswer = !showAnswer;
+  document.getElementById('answerBtn').classList.toggle('on', showAnswer);
+  document.body.classList.toggle('show-answer', showAnswer);
+  drawMaze();
+}
+
+// ============================================================
+// iPad：ズームやスクロールのはね返りを止める
+// ============================================================
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('touchmove', e => {
+  if (e.touches.length > 1 || !e.target.closest('.scroll')) e.preventDefault();
+}, { passive: false });
+let lastTouchEnd = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTouchEnd < 300 && !e.target.closest('input')) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });
+
+// ============================================================
+// はじめる
+// ============================================================
+document.getElementById('genBtn').addEventListener('click', () => regenerate());
+document.getElementById('answerBtn').addEventListener('click', toggleAnswer);
+document.getElementById('printBtn').addEventListener('click', () => {
+  try { window.print(); } catch (e) {}
+});
+document.getElementById('fileBtn').addEventListener('click', downloadPrintable);
+document.getElementById('copyBtn').addEventListener('click', copyHTML);
+document.getElementById('recallBtn').addEventListener('click', recallById);
+document.getElementById('idInput').addEventListener('keydown', e => { if (e.key === 'Enter') recallById(); });
+
+let resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(fitCanvas, 120); });
+
+(function init() {
+  const s = load('shape'); if (s && (s === 'random' || SH.some(x => x.id === s))) shapeSel = s;
+  const l = parseInt(load('level'), 10); if (l >= 0 && l < LEVELS.length) levelSel = l;
+  buildUI();
+  syncUI();
+  regenerate();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCanvas);
+})();
+</script>
+</body>
+</html>
