@@ -79,6 +79,7 @@
     cursor: pointer;
   }
   .shape-btn canvas { width: 34px; height: 34px; display: block; }
+  .shape-btn .long { font-size: 0.58rem; letter-spacing: -0.04em; }
   .shape-btn.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-dark); }
 
   .levels { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 2px solid var(--accent); border-radius: 10px; overflow: hidden; }
@@ -89,7 +90,8 @@
   .level-btn:last-child { border-right: none; }
   .modes { grid-template-columns: 1fr 1fr; }
   .mode-btn { font-size: 0.9rem; }
-  .level-btn[hidden], .shape-btn[hidden] { display: none; }
+  .level-btn[hidden], .shape-btn[hidden], .group[hidden] { display: none; }
+  .dir-btn { font-size: 0.82rem; }
   .level-btn small { display: block; font-size: 0.65rem; font-weight: 400; }
   .level-btn.active { background: var(--accent); color: #fff; }
 
@@ -186,6 +188,14 @@
       </div>
     </div>
 
+    <div class="group" id="dirGroup">
+      <div class="label">ぐるぐるの<ruby>向<rt>む</rt></ruby>き</div>
+      <div class="levels modes">
+        <button class="level-btn mode-btn dir-btn" data-dir="in">そと → まんなか</button>
+        <button class="level-btn mode-btn dir-btn" data-dir="out">まんなか → そと</button>
+      </div>
+    </div>
+
     <div class="group">
       <div class="label">むずかしさ</div>
       <div class="levels" id="levels"></div>
@@ -277,6 +287,12 @@ const SH = (() => {
     return pts;
   }
   const star = starPts(0, 0.08, 1.0, 0.52, 5);
+  // 正多角形の角（rot は最初の角の向き）
+  const polyPts = (n, r, rot) => Array.from({ length: n }, (_, k) => [r * Math.cos(rot + k * 2 * Math.PI / n), r * Math.sin(rot + k * 2 * Math.PI / n)]);
+  const tri = polyPts(3, 1.15, -Math.PI / 2);
+  const sq = polyPts(4, 1.15, -Math.PI / 4);
+  const pent = polyPts(5, 1.05, -Math.PI / 2);
+  const hex = polyPts(6, 1.0, 0);
   // おはな：まんなかの丸と、5まいの丸いはなびら
   const FLOWER = (x, y) => {
     if (C(x, y, 0, 0, 0.5)) return true;
@@ -286,7 +302,7 @@ const SH = (() => {
     }
     return false;
   };
-  const starRing = starPts(0, 0.1, 0.95, 0.6, 5);   // ぐるぐる用（先がほそくなりすぎないように）
+  const starStraight = starPts(0, 0.1, 1.0, 0.55, 5);   // ぐるぐる用（線がまっすぐのほし）
 
   return [
     { id: 'heart', ring: { c: [0, 0.05], s: [-0.55, -1.0], f: null, smooth: 5 }, cat: 'いつも', s: [-0.55, -1.0], t: [0, 1.3], code: 'HA', name: 'ハート', box: [-1.5, -1.5, 1.5, 1.5],
@@ -298,9 +314,7 @@ const SH = (() => {
         && !C(x, y, 0, -0.72, 0.2)
         || R(x, y, -0.11, -1.0, 0.11, -0.5)
         || E(x, y, 0.38, -0.86, 0.36, 0.17, -0.5) },
-    { id: 'fish', ring: { c: [-0.25, 0], s: [-1.35, 0], smooth: 2,
-        f: (x, y) => E(x, y, -0.25, 0, 1.05, 0.62),
-        deco: [{ t: 'poly', p: [[0.55, 0], [1.45, -0.72], [1.2, 0], [1.45, 0.72]] }, { t: 'ell', cx: -0.05, cy: -0.62, rx: 0.45, ry: 0.2, a: 0.15 }] }, cat: 'いつも', s: [-1.4, 0], t: [1.5, 0.8], code: 'FI', name: 'さかな', box: [-1.6, -1.2, 1.8, 1.2],
+    { id: 'fish', cat: 'いつも', s: [-1.4, 0], t: [1.5, 0.8], code: 'FI', name: 'さかな', box: [-1.6, -1.2, 1.8, 1.2],
       f: (x, y) => E(x, y, -0.25, 0, 1.05, 0.62)
         || P(x, y, [[0.55, 0], [1.45, -0.72], [1.2, 0], [1.45, 0.72]], 0.08)
         || E(x, y, -0.05, -0.62, 0.45, 0.2, 0.15) },
@@ -329,7 +343,7 @@ const SH = (() => {
       f: (x, y) => E(x, y, 0, 0.52, 0.8, 0.62)
         || E(x, y, -0.36, -0.5, 0.25, 0.68, -0.12)
         || E(x, y, 0.36, -0.5, 0.25, 0.68, 0.12) },
-    { id: 'star', ring: { c: [0, 0.1], s: [0, -1.1], f: (x, y) => P(x, y, starRing, 0.12), smooth: 4 }, cat: 'いつも', s: [0, -1.1], t: [0.65, 1.0], code: 'ST', name: 'ほし', box: [-1.3, -1.3, 1.3, 1.3],
+    { id: 'star', ring: { c: [0, 0.1], s: [0, -1.1], f: (x, y) => P(x, y, starStraight, 0), smooth: 0.5 }, cat: 'いつも', s: [0, -1.1], t: [0.65, 1.0], code: 'ST', name: 'ほし', box: [-1.3, -1.3, 1.3, 1.3],
       f: (x, y) => P(x, y, star, 0.07) },
     // ---- はる ----
     { id: 'tulip', cat: 'はる', s: [-0.6, -1.2], t: [0, 1.3], code: 'TU', name: 'チューリップ', box: [-1.2, -1.4, 1.2, 1.4],
@@ -370,6 +384,19 @@ const SH = (() => {
       f: (x, y) => R(x, y, -0.5, -1.05, 0.45, -0.72) || R(x, y, -0.4, -0.75, 0.35, 0.3)
         || RR(x, y, -0.4, 0.0, 0.98, 0.72, 0.36) },
     // ---- ここから下は ぐるぐる だけで使う形 ----
+    { id: 'circle', guruOnly: true, code: 'MA', name: 'まる', box: [-1.1, -1.1, 1.1, 1.1],
+      f: (x, y) => C(x, y, 0, 0, 1), ring: { c: [0, 0], s: [0, -1.1], smooth: 0.5 } },
+    { id: 'triangle', guruOnly: true, code: 'SA', name: 'さんかく', box: [-1.1, -1.2, 1.1, 0.7],
+      f: (x, y) => P(x, y, tri, 0), ring: { c: [0, 0], s: [-0.55, -0.25], smooth: 0.5 } },
+    { id: 'square', guruOnly: true, code: 'SQ', name: 'しかく', box: [-0.9, -0.9, 0.9, 0.9],
+      f: (x, y) => P(x, y, sq, 0), ring: { c: [0, 0], s: [-0.4, -0.85], smooth: 0.5 } },
+    { id: 'pentagon', guruOnly: true, code: 'GO', name: 'ごかっけい', box: [-1.1, -1.1, 1.1, 1.0],
+      f: (x, y) => P(x, y, pent, 0), ring: { c: [0, 0], s: [-0.45, -0.7], smooth: 0.5 } },
+    { id: 'hexagon', guruOnly: true, code: 'RK', name: 'ろっかっけい', box: [-1.1, -1.0, 1.1, 1.0],
+      f: (x, y) => P(x, y, hex, 0), ring: { c: [0, 0], s: [0, -0.95], smooth: 0.5 } },
+    { id: 'wavy', guruOnly: true, code: 'NA', name: 'なみなみ', box: [-1.1, -1.1, 1.1, 1.1],
+      f: (x, y) => Math.hypot(x, y) <= 0.88 + 0.1 * Math.cos(8 * Math.atan2(y, x) + Math.PI / 2),
+      ring: { c: [0, 0], s: [0, -1.1], smooth: 1 } },
     { id: 'egg', guruOnly: true, code: 'TA', name: 'たまご', box: [-1, -1.2, 1, 1.2],
       f: (x, y) => y >= -1 && y <= 1 && x * x <= 0.62 * (1 - y * y) * (1 + 0.3 * y),
       ring: { c: [0, 0.1], s: [0, -1.1], smooth: 2 } },
@@ -381,12 +408,6 @@ const SH = (() => {
       f: (x, y) => FLOWER(x, y) || R(x, y, -0.07, 0.7, 0.07, 1.6) || E(x, y, 0.32, 1.22, 0.32, 0.13, -0.5),
       ring: { c: [0, 0], s: [0, -1.05], smooth: 3, f: (x, y) => FLOWER(x, y),
         deco: [{ t: 'rect', x0: -0.07, y0: 0.6, x1: 0.07, y1: 1.6 }, { t: 'ell', cx: 0.32, cy: 1.22, rx: 0.32, ry: 0.13, a: -0.5 }] } },
-    { id: 'ladybug', guruOnly: true, code: 'TE', name: 'てんとうむし', box: [-1.1, -1.4, 1.1, 1.1],
-      f: (x, y) => E(x, y, 0, 0.15, 0.85, 0.8) || C(x, y, 0, -0.68, 0.36),
-      ring: { c: [0, 0.18], s: [-0.95, 0.3], smooth: 2, f: (x, y) => E(x, y, 0, 0.15, 0.85, 0.8),
-        deco: [{ t: 'line', p: [[-0.12, -0.9], [-0.35, -1.25]] }, { t: 'line', p: [[0.12, -0.9], [0.35, -1.25]] },
-               { t: 'ell', cx: -0.37, cy: -1.27, rx: 0.07, ry: 0.07, fill: '#000' }, { t: 'ell', cx: 0.37, cy: -1.27, rx: 0.07, ry: 0.07, fill: '#000' },
-               { t: 'ell', cx: 0, cy: -0.68, rx: 0.36, ry: 0.36, fill: '#888' }] } },
   ];
 })();
 for (const sh of SH) if (sh.ring && !sh.ring.f) sh.ring.f = sh.f;
@@ -929,6 +950,7 @@ const LEVELS = [
 ];
 
 let shapeSel = 'heart';
+let guruDir = 'in';       // ぐるぐるの向き 'in' そと→まんなか / 'out' まんなか→そと
 let modeSel = 'kaku';     // 'kaku' カクカク / 'guru' ぐるぐる
 const GURU_MAX_LV = 2;     // ぐるぐるは「ちょいむず」まで（それより上は線がこみあって読みにくい）
 let levelSel = 1;
@@ -970,12 +992,17 @@ function buildUI() {
     const cv = document.createElement('canvas');
     drawIcon(cv, sh);
     const t = document.createElement('span'); t.textContent = sh.name;
+    if (sh.name.length >= 6) t.className = 'long';
     b.append(cv, t);
     b.addEventListener('click', () => { shapeSel = sh.id; store('shape', sh.id); syncUI(); regenerate(); });
     box.appendChild(b);
   }
 
-  document.querySelectorAll('.mode-btn').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.dir-btn').forEach(b => b.addEventListener('click', () => {
+    guruDir = b.dataset.dir; store('dir', guruDir); syncUI();
+    if (current && current.mode === 'guru') { current.dir = guruDir; drawMaze(); showResult(); }
+  }));
+  document.querySelectorAll('.mode-btn:not(.dir-btn)').forEach(b => b.addEventListener('click', () => {
     modeSel = b.dataset.mode; store('mode', modeSel);
     if (modeSel === 'guru' && levelSel > GURU_MAX_LV) { levelSel = GURU_MAX_LV; store('level', levelSel); }
     const cur = SH.find(x => x.id === shapeSel);
@@ -1002,7 +1029,9 @@ function syncUI() {
     b.classList.toggle('active', +b.dataset.lv === levelSel);
     b.hidden = modeSel === 'guru' && +b.dataset.lv > GURU_MAX_LV;
   });
-  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === modeSel));
+  document.querySelectorAll('.mode-btn:not(.dir-btn)').forEach(b => b.classList.toggle('active', b.dataset.mode === modeSel));
+  document.querySelectorAll('.dir-btn').forEach(b => b.classList.toggle('active', b.dataset.dir === guruDir));
+  document.getElementById('dirGroup').hidden = modeSel !== 'guru';
 }
 
 let toastTimer;
@@ -1013,10 +1042,10 @@ function toast(msg) {
 }
 
 // ============================================================
-// 番号：かたちのコード＋（ぐるぐるは G）＋むずかしさ（1〜5）＋4けた。例 HA3-0482 / HAG3-0482
+// 番号：かたちのコード＋（ぐるぐるは G、まんなかから外へは O）＋むずかしさ（1〜5）＋4けた。例 HA3-0482 / HAG3-0482
 // ============================================================
-function mazeIdString(sh, lv, seed, mode) {
-  return sh.code + (mode === 'guru' ? 'G' : '') + (lv + 1) + '-' + String(seed).padStart(4, '0');
+function mazeIdString(sh, lv, seed, mode, dir) {
+  return sh.code + (mode === 'guru' ? (dir === 'out' ? 'O' : 'G') : '') + (lv + 1) + '-' + String(seed).padStart(4, '0');
 }
 function seedFor(sh, lv, seed, mode) {
   let h = Math.imul(seed + 1, 2654435761) ^ Math.imul(sh.code.charCodeAt(0) * 31 + sh.code.charCodeAt(1) + lv * 977 + (mode === 'guru' ? 50021 : 0), 40503);
@@ -1051,8 +1080,8 @@ function setBusy(b) {
 
 function regenerate(forced) {
   const myJob = ++jobId;
-  let sh, lv = levelSel, seed, mode = modeSel;
-  if (forced) { sh = forced.sh; lv = forced.lv; seed = forced.seed; mode = forced.mode; }
+  let sh, lv = levelSel, seed, mode = modeSel, dir = guruDir;
+  if (forced) { sh = forced.sh; lv = forced.lv; seed = forced.seed; mode = forced.mode; dir = forced.dir || dir; }
   else {
     sh = SH.find(s => s.id === shapeSel) || SH[0];
     seed = Math.floor(Math.random() * 10000);
@@ -1081,7 +1110,7 @@ function regenerate(forced) {
       return;
     }
     const ev = opt.ev;
-    current = { sh, lv, seed, mode, g, ends, open, path: ev.path, ev };
+    current = { sh, lv, seed, mode, dir, g, ends, open, path: ev.path, ev };
     setBusy(false);
     drawMaze();
     showResult();
@@ -1090,13 +1119,13 @@ function regenerate(forced) {
 }
 
 function showResult() {
-  const { sh, lv, seed, mode, ev } = current;
-  const id = mazeIdString(sh, lv, seed, mode);
+  const { sh, lv, seed, mode, dir, ev } = current;
+  const id = mazeIdString(sh, lv, seed, mode, dir);
   document.getElementById('mazeId').textContent = 'No. ' + id;
   document.getElementById('printTitle').textContent = sh.name + 'の めいろ';
   const m = ev.effort / BASE_EFFORT;
   infoEl.innerHTML =
-    `${R('番号', 'ばんごう')}：<b>${id}</b>（${sh.name}・${mode === 'guru' ? 'ぐるぐる' : 'カクカク'}・${LEVELS[lv].name}）<br>` +
+    `${R('番号', 'ばんごう')}：<b>${id}</b>（${sh.name}・${mode === 'guru' ? (dir === 'out' ? 'ぐるぐる・まんなかから' : 'ぐるぐる・まんなかへ') : 'カクカク'}・${LEVELS[lv].name}）<br>` +
     `むずかしさ：ムズめいろの「ちょいむず」の <b>${R('約', 'やく')}${m.toFixed(1)}${R('倍', 'ばい')}</b><br>` +
     `${R('正解', 'せいかい')}の${R('道', 'みち')} ${ev.pathLen}マス・${R('部屋', 'へや')} ${current.g.n}マス`;
 }
@@ -1323,14 +1352,21 @@ function drawRingMaze() {
   c.fillStyle = '#000';
   c.font = `700 ${fs}px "BIZ UDPGothic", sans-serif`;
   c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.fillText('ゴール', gx, gy);
+  // まんなかの文字は、まんなかの部屋に入る大きさにする
+  const label = current.dir === 'out' ? 'スタート' : 'ゴール';
+  let fsz = Math.min(cr * 0.62, 26);
+  c.font = `700 ${fsz}px "BIZ UDPGothic", sans-serif`;
+  const tw = c.measureText(label).width;
+  if (tw > cr * 1.5) fsz *= cr * 1.5 / tw;
+  c.font = `700 ${Math.max(8, fsz)}px "BIZ UDPGothic", sans-serif`;
+  c.fillText(label, gx, gy);
 
-  // スタートの矢印（外から中へ）
+  // 外がわの矢印（まんなかへ行くときは中向き、外へ出るときは外向き）
   const size = Math.max(20, Math.min(U * 2.2, 48));
   const ts = g.tm[ends.s];
   const [bx, by] = Q(ts, 1);
   const off = size * 0.5 + wall * 2;
-  drawArrow(c, bx + Math.cos(ts) * off, by + Math.sin(ts) * off, size, ts + Math.PI / 2);
+  drawArrow(c, bx + Math.cos(ts) * off, by + Math.sin(ts) * off, size, current.dir === 'out' ? ts - Math.PI / 2 : ts + Math.PI / 2);
 }
 
 function fitCanvas() {
@@ -1349,7 +1385,7 @@ function recallById() {
   const raw = document.getElementById('idInput').value.trim().toUpperCase()
     .replace(/[Ａ-Ｚ０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
     .replace(/[－ー‐―−]/g, '-');
-  const m = raw.match(/^([A-Z]{2})(G?)([1-5])-?(\d{1,4})$/);
+  const m = raw.match(/^([A-Z]{2})([GO]?)([1-5])-?(\d{1,4})$/);
   const sh = m && SH.find(s => s.code === m[1]);
   const mode = m && m[2] ? 'guru' : 'kaku';
   if (!sh || (mode === 'guru' && (+m[3] - 1 > GURU_MAX_LV || !sh.ring)) || (mode === 'kaku' && sh.guruOnly)) {
@@ -1357,8 +1393,9 @@ function recallById() {
     return;
   }
   shapeSel = sh.id; levelSel = +m[3] - 1; modeSel = mode;
+  if (mode === 'guru') guruDir = m[2] === 'O' ? 'out' : 'in';
   syncUI();
-  regenerate({ sh, lv: levelSel, seed: parseInt(m[4], 10), mode });
+  regenerate({ sh, lv: levelSel, seed: parseInt(m[4], 10), mode, dir: guruDir });
 }
 
 function toggleAnswer() {
@@ -1398,6 +1435,7 @@ window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer
 
 (function init() {
   const s = load('shape'); if (s && SH.some(x => x.id === s)) shapeSel = s;
+  const dd = load('dir'); if (dd === 'in' || dd === 'out') guruDir = dd;
   const md = load('mode'); if (md === 'guru' || md === 'kaku') modeSel = md;
   const l = parseInt(load('level'), 10); if (l >= 0 && l < LEVELS.length) levelSel = l;
   if (modeSel === 'guru' && levelSel > GURU_MAX_LV) levelSel = GURU_MAX_LV;
