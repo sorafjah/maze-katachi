@@ -834,11 +834,9 @@ const TAU = 2 * Math.PI;
 const wrapAng = d => { while (d > Math.PI) d -= TAU; while (d <= -Math.PI) d += TAU; return d; };
 
 // N 本のわで部屋を作る
-//  見分けやすくするための決まり
-//  ・部屋のしきりの線は、わの線に直角に引く（ななめにあたって細いすきまができないように）
-//  ・内がわのわのしきりと、ほんの少しだけずれたしきりは作らない（ぴったりそろえる）
-//  ・せますぎる部屋は、となりとまとめる
-//  部屋は、内がわの線の区間 [ai, bi] と外がわの線の区間 [ao, bo]（角度）をもつ
+//  印刷してもすきまがつぶれないように
+//  ・内がわのわのしきりと、ほんの少しだけずれたしきりは、ぴったりそろえる
+//  ・とても細い部屋は、となりとまとめる
 function buildRings(sh, N) {
   const Rt = ringRadius(sh);
   const [cx, cy] = sh.ring.c;
@@ -846,63 +844,45 @@ function buildRings(sh, N) {
   const r1 = Math.max(RING_C0 / (RING_C0 + N - 1), 0.14);
   const th = (1 - r1) / (N - 1);                             // わ1本のはば（ρで）
   const rho = k => k === 0 ? 0 : r1 + (k - 1) * th;         // わ k の内がわ
-  const PT = (p, t) => ringPt(Rt, cx, cy, p, t);
-  const thickAt = t => ringR(Rt, t) * th;
-  // わのまん中の線の角度 t の点から、わの線に直角に引いた線が、ρ=pT の線とまじわる角度
-  function foot(t, p0, pT) {
-    const [x0, y0] = PT(p0, t);
-    const [xa, ya] = PT(p0, t - 1e-3), [xb, yb] = PT(p0, t + 1e-3);
-    let nx = yb - ya, ny = -(xb - xa);
-    const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl;
-    const f = q => { const [x, y] = PT(pT, q); return nx * (y - y0) - ny * (x - x0); };
-    let fa0 = f(t);
-    if (fa0 === 0) return t;
-    const step = 0.003;
-    let fp = fa0, fm = fa0;
-    for (let s = step; s <= 0.45; s += step) {
-      const tp = t + s, tn = t - s;
-      const gp = f(tp), gn = f(tn);
-      for (const [lo0, hi0, flo0, fhi] of [[tp - step, tp, fp, gp], [tn + step, tn, fm, gn]]) {
-        if ((flo0 < 0) !== (fhi < 0)) {
-          let lo = lo0, hi = hi0, flo = flo0;
-          for (let i = 0; i < 25; i++) {
-            const mid = (lo + hi) / 2, fmid = f(mid);
-            if ((fmid < 0) === (flo < 0)) { lo = mid; flo = fmid; } else hi = mid;
-          }
-          return (lo + hi) / 2;
-        }
-      }
-      fp = gp; fm = gn;
-    }
-    return t;
-  }
-  const cells = [{ k: 0, a: 0, b: TAU, ai: 0, bi: TAU, ao: 0, bo: TAU }];
+  const cells = [{ k: 0, a: 0, b: 2 * Math.PI }];
   const rings = [[0]];
-  let prevOut = [];
+  let prevBounds = [];
   for (let k = 1; k < N; k++) {
     const pm = (rho(k) + rho(k + 1)) / 2;
     // わのまん中の線にそって、部屋がだいたい正方形になるように分ける
     const u = new Float64Array(RING_A + 1);
     let px = cx + pm * Rt[0], py = cy;
     for (let m = 1; m <= RING_A; m++) {
-      const t = TAU * m / RING_A;
+      const t = 2 * Math.PI * m / RING_A;
       const r = pm * Rt[m % RING_A];
       const qx = cx + r * Math.cos(t), qy = cy + r * Math.sin(t);
-      u[m] = u[m - 1] + Math.hypot(qx - px, qy - py) / (Rt[m % RING_A] * th);
+      const thick = Rt[m % RING_A] * th;
+      u[m] = u[m - 1] + Math.hypot(qx - px, qy - py) / thick;
       px = qx; py = qy;
     }
     const n = Math.max(4, Math.round(u[RING_A]));
     const step = u[RING_A] / n;
     const off = ((k * 0.618034) % 1) * step;           // わごとに区切りの位置をずらす
-    let bs = [];
+    const bounds = [];
     let m = 0;
     for (let j = 0; j < n; j++) {
       const target = off + j * step;
       while (m < RING_A && u[m + 1] < target) m++;
       const fr = (target - u[m]) / ((u[m + 1] - u[m]) || 1);
-      bs.push(TAU * (m + fr) / RING_A);
+      bounds.push(2 * Math.PI * (m + fr) / RING_A);
     }
-    // せますぎる部屋は、となりとまとめる
+    const thickAt = t => Rt[Math.floor(((t % TAU) + TAU) % TAU / TAU * RING_A) % RING_A] * th;
+    let bs = bounds.map(b => ((b % TAU) + TAU) % TAU);
+    if (k >= 2) {
+      bs = bs.map(b => {
+        let best = b, bd = Infinity;
+        for (const c of prevBounds) { const d = wrapAng(c - b); if (Math.abs(d) < Math.abs(bd)) { bd = d; best = c; } }
+        return ringArcLen(Rt, cx, cy, rho(k), b, b + bd) < 0.35 * thickAt(b) ? best : b;
+      });
+    }
+    bs.sort((a, b) => a - b);
+    bs = bs.filter((b, i) => i === 0 || b - bs[i - 1] > 1e-7);
+    if (bs.length > 1 && bs[0] + TAU - bs[bs.length - 1] < 1e-7) bs.pop();
     for (let guard = 0; guard < 400 && bs.length > 4; guard++) {
       let worst = -1, wv = Infinity;
       for (let j = 0; j < bs.length; j++) {
@@ -910,41 +890,15 @@ function buildRings(sh, N) {
         const v = ringArcLen(Rt, cx, cy, pm, a, b) / thickAt((a + b) / 2);
         if (v < wv) { wv = v; worst = j; }
       }
-      if (wv >= 0.6) break;
+      if (wv >= 0.5) break;
       bs.splice((worst + 1) % bs.length, 1);
     }
-    // しきりの線の、内がわと外がわのはし
-    let tin = bs.map(t => foot(t, pm, rho(k)));
-    const tout = bs.map(t => foot(t, pm, rho(k + 1)));
-    // 内がわのわのしきりに近いときは、ぴったりそろえる
-    if (k >= 2) {
-      tin = tin.map(t => {
-        let bd = Infinity;
-        for (const c of prevOut) { const d = wrapAng(c - t); if (Math.abs(d) < Math.abs(bd)) bd = d; }
-        return ringArcLen(Rt, cx, cy, rho(k), t, t + bd) < 0.8 * thickAt(t) ? t + bd : t;
-      });
-    }
-    // しきりどうしが交わるところは、まっすぐ（まんなかから外向き）にもどす
-    const L = bs.length;
-    for (const arr of [tin, tout]) {
-      for (let pass = 0; pass < 5; pass++) {
-        let bad = false;
-        for (let j = 0; j < L; j++) {
-          const jn = (j + 1) % L;
-          if (wrapAng(arr[jn] - arr[j]) < 0) { arr[j] = bs[j]; arr[jn] = bs[jn]; bad = true; }
-        }
-        if (!bad) break;
-      }
-    }
-    prevOut = tout.slice();
+    prevBounds = bs;
     const ring = [];
-    for (let j = 0; j < L; j++) {
-      const jn = (j + 1) % L;
-      const a = bs[j], b = j + 1 < L ? bs[j + 1] : bs[0] + TAU;
+    for (let j = 0; j < bs.length; j++) {
+      const a = bs[j], b = j + 1 < bs.length ? bs[j + 1] : bs[0] + TAU;
       ring.push(cells.length);
-      cells.push({ k, a, b,
-        ai: a + wrapAng(tin[j] - a), bi: b + wrapAng(tin[jn] - bs[jn]),
-        ao: a + wrapAng(tout[j] - a), bo: b + wrapAng(tout[jn] - bs[jn]) });
+      cells.push({ k, a, b });
     }
     rings.push(ring);
   }
@@ -999,14 +953,14 @@ function makeRingGraph(sh, area) {
     for (let j = 0; j < len; j++) add(r[j], r[(j + 1) % len]);
     for (const i of r) {
       const c = cells[i];
-      if (k === 1) { add(i, 0, (c.ai + c.bi) / 2); continue; }
+      if (k === 1) { add(i, 0, (c.a + c.b) / 2); continue; }
       for (const p of rings[k - 1]) {
         const d = cells[p];
-        const [ov, at] = arcOverlap(c.ai, c.bi, d.ao, d.bo);
-        if (ov <= 0) continue;
-        // 通り道の口の長さが、通路のはばの0.85倍より短いところは通路にしない（通れるか見分けにくいため）
-        const len = ringArcLen(Rt, cx, cy, rho(k), at - ov / 2, at + ov / 2);
-        if (len >= 0.85 * ringR(Rt, at) * th) add(i, p, at);
+        const [ov, at] = arcOverlap(c.a, c.b, d.a, d.b);
+        // 重なりが小さすぎるところは通路にしない（細すぎて通れないため）
+        //  口の長さが通路のはばの0.7倍より短いと、印刷したときにすきまがつぶれやすい
+        if (ov > 0.35 * Math.min(c.b - c.a, d.b - d.a)
+            && ringArcLen(Rt, cx, cy, rho(k), at - ov / 2, at + ov / 2) >= 0.7 * ringR(Rt, at) * th) add(i, p, at);
       }
     }
   }
@@ -1354,7 +1308,7 @@ function drawRingMaze() {
   c.fillRect(0, 0, W, H);
   const P = (x, y) => [(x - x0) * k, (y - y0) * k];
   const Q = (t, p) => { const [x, y] = PT(t, p); return P(x, y); };
-  const wall = Math.max(2, U * 0.17);
+  const wall = Math.max(2, U * 0.2);
 
   // わにそった線を path に足す（角度 a から b まで、ρ = p）
   function arcTo(path, p, a, b, move) {
@@ -1434,13 +1388,13 @@ function drawRingMaze() {
       const i = ring[q], cl = G.cells[i];
       // 内がわのわの線
       if (kk === 1) {
-        if (!isOpen(i, 0)) arcTo(inner, G.rho(1), cl.ai, cl.bi, true);
+        if (!isOpen(i, 0)) arcTo(inner, G.rho(1), cl.a, cl.b, true);
       } else {
         for (const p of G.rings[kk - 1]) {
           if (isOpen(i, p)) continue;
           const d = G.cells[p];
           for (const sft of [-2 * Math.PI, 0, 2 * Math.PI]) {
-            const lo = Math.max(cl.ai, d.ao + sft), hi = Math.min(cl.bi, d.bo + sft);
+            const lo = Math.max(cl.a, d.a + sft), hi = Math.min(cl.b, d.b + sft);
             if (hi > lo + 1e-9) arcTo(inner, G.rho(kk), lo, hi, true);
           }
         }
@@ -1448,11 +1402,11 @@ function drawRingMaze() {
       // となりの部屋とのしきり
       const nx = ring[(q + 1) % ring.length];
       if (!isOpen(i, nx)) {
-        const [a, b] = Q(cl.bi, G.rho(kk)), [e, f] = Q(cl.bo, G.rho(kk + 1));
+        const [a, b] = Q(cl.b, G.rho(kk)), [e, f] = Q(cl.b, G.rho(kk + 1));
         inner.moveTo(a, b); inner.lineTo(e, f);
       }
       // いちばん外のわ：外がわの線（入口と出口はあける）
-      if (kk === N - 1 && i !== ends.s && !(edge && i === ends.t)) arcTo(outer, 1, cl.ao, cl.bo, true);
+      if (kk === N - 1 && i !== ends.s && !(edge && i === ends.t)) arcTo(outer, 1, cl.a, cl.b, true);
     }
   }
   c.strokeStyle = '#000';
